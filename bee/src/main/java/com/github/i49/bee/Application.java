@@ -9,8 +9,10 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.github.i49.bee.buzz.Buzz;
-import com.github.i49.bee.buzz.BuzzLoader;
+import com.github.i49.bee.buzz.JsonBeeConfiguration;
+import com.github.i49.bee.core.Bee;
+import com.github.i49.bee.core.BeeConfiguration;
+import com.github.i49.bee.core.LoadableBeeConfiguration;
 
 @SpringBootApplication
 public class Application implements ApplicationRunner {
@@ -23,7 +25,16 @@ public class Application implements ApplicationRunner {
 	public void run(ApplicationArguments args) throws Exception {
 		List<String> nonOptions = args.getNonOptionArgs();
 		String jsonName = nonOptions.size() > 0 ? nonOptions.get(0) : DEFAULT_JSON_NAME;
-		Buzz buzz = new BuzzLoader().load(jsonName);
+		Bee bee = createBee(JsonBeeConfiguration.class, jsonName);
+		bee.buzz();
+	}
+	
+	private Bee createBee(Class<? extends BeeConfiguration> clazz, String jsonName) throws InstantiationException, IllegalAccessException {
+		BeeConfiguration configuration = clazz.newInstance();
+		if (configuration instanceof LoadableBeeConfiguration) {
+			((LoadableBeeConfiguration)configuration).setSource(jsonName);
+		}
+		return configuration.getBee();
 	}
 	
 	public static void main(String[] args) {

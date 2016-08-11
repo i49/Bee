@@ -1,4 +1,4 @@
-package com.github.i49.bee.buzz;
+package com.github.i49.bee.core;
 
 public class SeedPage {
 
