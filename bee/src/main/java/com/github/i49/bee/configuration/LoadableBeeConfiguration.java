@@ -1,4 +1,4 @@
-package com.github.i49.bee.core;
+package com.github.i49.bee.configuration;
 
 public interface LoadableBeeConfiguration extends BeeConfiguration {
 

@@ -9,10 +9,10 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.github.i49.bee.buzz.JsonBeeConfiguration;
+import com.github.i49.bee.configuration.BeeConfiguration;
+import com.github.i49.bee.configuration.JsonBeeConfiguration;
+import com.github.i49.bee.configuration.LoadableBeeConfiguration;
 import com.github.i49.bee.core.Bee;
-import com.github.i49.bee.core.BeeConfiguration;
-import com.github.i49.bee.core.LoadableBeeConfiguration;
 
 @SpringBootApplication
 public class Application implements ApplicationRunner {
