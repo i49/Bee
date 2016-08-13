@@ -13,8 +13,6 @@ import com.github.i49.bee.core.Bee;
 @SpringBootApplication
 public class Application implements ApplicationRunner {
 
-	private static final Log log = LogFactory.getLog(Application.class);
-
 	@Autowired
 	private Bee bee;
 	

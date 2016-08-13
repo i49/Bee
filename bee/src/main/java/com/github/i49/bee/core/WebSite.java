@@ -1,5 +1,6 @@
 package com.github.i49.bee.core;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,34 @@ public class WebSite {
 	
 	public List<String> getPaths() {
 		return paths;
+	}
+
+	public boolean contains(URL location) {
+		if (!location.getHost().equals(this.host)) {
+			return false;
+		}
+		if (this.port != -1) {
+			int port = location.getPort();
+			if (port == -1) {
+				port = location.getDefaultPort();
+			}
+			if (port != this.port) {
+				return false;
+			}
+		}
+		return containsPath(location.getPath());
+	}
+	
+	public boolean containsPath(String path) {
+		if (this.paths.size() == 0) {
+			return true;
+		}
+		for (String prefix : this.paths) {
+			if (path.startsWith(prefix)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
