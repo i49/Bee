@@ -1,6 +1,7 @@
 package com.github.i49.bee.web;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.HttpURLConnection;
@@ -8,6 +9,7 @@ import java.net.URL;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xml.sax.SAXException;
 
 public class WebDownloader {
 
@@ -18,13 +20,18 @@ public class WebDownloader {
 		CookieHandler.setDefault(manager);
 	}
 	
-	public WebResource download(URL location) throws IOException {
+	public WebResource download(URL location) throws IOException, SAXException {
 		HttpURLConnection conn = (HttpURLConnection)location.openConnection();
 		conn.connect();
 		int code = conn.getResponseCode();
+		log.debug("HTTP status code = " + code);
 		if (code != HttpURLConnection.HTTP_OK) {
-			log.warn("HTTP status code = " + code);
+			return null;
 		}
-		return null;
+		String contentType = conn.getContentType();
+		log.debug("Content type = " + contentType);
+		try (InputStream stream = conn.getInputStream()) {
+			return HtmlWebResource.contentOf(location, stream);
+		}
 	}
 }
