@@ -2,19 +2,19 @@ package com.github.i49.bee.core;
 
 public class SeedPage {
 
-	private String location;
-	private int depth;
+	private final String location;
+	private final int distance;
 
+	public SeedPage(String location, int distance) {
+		this.location = location.trim();
+		this.distance = distance;
+	}
+	
 	public String getLocation() {
 		return location;
 	}
-	public void setLocation(String location) {
-		this.location = location;
-	}
-	public int getDepth() {
-		return depth;
-	}
-	public void setDepth(int depth) {
-		this.depth = depth;
+	
+	public int getDistance() {
+		return distance;
 	}
 }
