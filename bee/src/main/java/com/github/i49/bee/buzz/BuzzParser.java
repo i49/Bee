@@ -1,4 +1,4 @@
-package com.github.i49.bee.configuration;
+package com.github.i49.bee.buzz;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,15 +16,12 @@ import com.github.i49.bee.core.Bee;
 import com.github.i49.bee.core.SeedPage;
 import com.github.i49.bee.core.WebSite;
 
-public class JsonBeeConfiguration implements LoadableBeeConfiguration {
+public class BuzzParser {
 
-	private static final Log log = LogFactory.getLog(JsonBeeConfiguration.class);
+	private static final Log log = LogFactory.getLog(BuzzParser.class);
 	
-	private File source;
-	
-	@Override
-	public Bee getBee() {
-		JsonNode rootNode = loadJson(this.source);
+	public Bee parseBuzz(File file) {
+		JsonNode rootNode = loadJson(file);
 		if (rootNode != null) {
 			return configureBee(new Bee(), rootNode);
 		} else {
@@ -32,11 +29,6 @@ public class JsonBeeConfiguration implements LoadableBeeConfiguration {
 		}
 	}
 
-	@Override
-	public void setSource(String source) {
-		this.source = new File(source);
-	}
-	
 	private JsonNode loadJson(File source) {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
