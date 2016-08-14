@@ -6,5 +6,5 @@ public interface WebResource {
 
 	URL getLocation();
 	
-	String getContentType();
+	MediaType getMediaType();
 }

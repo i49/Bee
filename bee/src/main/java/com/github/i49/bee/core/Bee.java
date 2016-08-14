@@ -28,7 +28,7 @@ public class Bee {
 	private final List<SeedPage> seeds = new ArrayList<>();
 	private final List<WebSite> sites = new ArrayList<>();
 	
-	private final WebDownloader downloader = new WebDownloader();
+	private WebDownloader downloader;
 	
 	private final Deque<Place> placesToVisit = new LinkedList<>();
 	private final Set<URL> history = new HashSet<URL>();
@@ -48,7 +48,13 @@ public class Bee {
 		log.debug("Starting visitAll()");
 		this.placesToVisit.clear();
 		this.history.clear();
-		visitAllSeeds(this.seeds);
+		try (WebDownloader downloader = new WebDownloader()) {
+			this.downloader = downloader;
+			visitAllSeeds(this.seeds);
+			this.downloader = null;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	protected void visitAllSeeds(List<SeedPage> seeds) {

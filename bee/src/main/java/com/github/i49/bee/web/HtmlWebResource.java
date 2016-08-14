@@ -3,8 +3,6 @@ package com.github.i49.bee.web;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +23,7 @@ public class HtmlWebResource implements WebResource {
 	private final URL location;
 	private final Document document;
 	
-	public HtmlWebResource(URL location, Document document) {
+	protected HtmlWebResource(URL location, Document document) {
 		this.location = location;
 		this.document = document;
 	}
@@ -36,24 +34,14 @@ public class HtmlWebResource implements WebResource {
 	}
 	
 	@Override
-	public String getContentType() {
-		// TODO Auto-generated method stub
-		return null;
+	public MediaType getMediaType() {
+		return MediaType.APPLICATION_XHTML_XML;
 	}
 	
 	public Document getDocument() {
 		return document;
 	}
 	
-	public URI getURI() {
-		try {
-			return location.toURI();
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
 	public List<URL> getOutboundLinks() {
 		List<URL> links = new ArrayList<>();
 		NodeList nodes = this.document.getElementsByTagName("a");
