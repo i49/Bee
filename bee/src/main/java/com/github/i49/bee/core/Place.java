@@ -16,6 +16,10 @@ public class Place {
 		return location;
 	}
 
+	/**
+	 * Returns distance from starting place.
+	 * @return distance from starting place
+	 */
 	public int getDistance() {
 		return distance;
 	}

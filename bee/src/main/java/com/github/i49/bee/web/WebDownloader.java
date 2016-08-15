@@ -1,6 +1,5 @@
 package com.github.i49.bee.web;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -15,7 +14,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.xml.sax.SAXException;
 
-public class WebDownloader implements Closeable {
+public class WebDownloader implements AutoCloseable {
 
 	private static final Log log = LogFactory.getLog(WebDownloader.class);
 	

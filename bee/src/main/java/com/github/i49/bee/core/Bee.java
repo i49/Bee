@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -59,36 +60,39 @@ public class Bee {
 	
 	protected void visitAllSeeds(List<SeedPage> seeds) {
 		for (SeedPage seed: seeds) {
-			visitSeed(seed);
+			startFromSeed(seed);
 		}
 	}
 	
-	protected void visitSeed(SeedPage seed) {
+	protected void startFromSeed(SeedPage seed) {
 		try {
-			URL location = new URL(seed.getLocation());
-			visit(location, seed.getDistance());
-			while (!this.placesToVisit.isEmpty()) {
-				Place place = this.placesToVisit.removeFirst();
-				visit(place.getLocation(), place.getDistance());
-			}
+			this.placesToVisit.clear();
+			this.placesToVisit.add(seed.createPlace());
+			visitAllPlaces(seed.getDistanceLimit());
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	protected void visit(URL location, int distance) {
-		addToHistory(location);
-		WebResource resource = fetch(location);
-		if (resource instanceof HtmlWebResource) {
-			handleHtmlResource((HtmlWebResource)resource, distance);
+	protected void visitAllPlaces(int distanceLimit) {
+		while (!this.placesToVisit.isEmpty()) {
+			Place place = this.placesToVisit.removeFirst();
+			visit(place.getLocation(), place.getDistance(), distanceLimit);
 		}
 	}
 	
-	protected void handleHtmlResource(HtmlWebResource resource, int distance) {
-		if (distance > 0) {
-			final int nextDistance = distance - 1; 
+	protected void visit(URL location, int distance, int distanceLimit) {
+		addToHistory(location);
+		WebResource resource = fetch(location, distance);
+		if (resource instanceof HtmlWebResource) {
+			handleHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
+		}
+	}
+	
+	protected void handleHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
+		if (distance < distanceLimit) {
 			for (URL link: resource.getOutboundLinks()) {
-				planToVisit(resource.getLocation(), link, nextDistance);
+				planToVisit(resource.getLocation(), link, distance + 1);
 			}
 		}
 	}
@@ -99,8 +103,8 @@ public class Bee {
 		}
 	}
 	
-	protected WebResource fetch(URL location) {
-		log.debug("Fetching " + location.toString());
+	protected WebResource fetch(URL location, int distance) {
+		log.info(repeat(' ', distance) + location.toString());
 		try {
 			WebResource resource = this.downloader.download(location);
 			return resource;
@@ -110,6 +114,12 @@ public class Bee {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	protected static String repeat(char ch, int count) {
+		char[] chars = new char[count];
+		Arrays.fill(chars, ch);
+		return new String(chars);
 	}
 	
 	protected boolean canVisit(URL location) {
