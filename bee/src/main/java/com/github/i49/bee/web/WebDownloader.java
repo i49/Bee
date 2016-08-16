@@ -39,7 +39,6 @@ public class WebDownloader implements AutoCloseable {
 	
 	private WebResource createWebResource(URL location, HttpEntity entity) throws IOException, SAXException {
 		String contentType = entity.getContentType().getValue();
-		log.debug("Content type = " + contentType);
 		MediaType mediaType = parseMediaType(contentType);
 		if (mediaType == null) {
 			return null;
