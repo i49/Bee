@@ -55,7 +55,7 @@ public class WebDownloader implements AutoCloseable {
 	
 	private static MediaType parseMediaType(String contentType) {
 		String[] tokens = contentType.split(";");
-		MediaType mediaType = MediaType.valueOf(tokens[0]);
+		MediaType mediaType = MediaType.of(tokens[0]);
 		if (mediaType == null) {
 			log.error("Unknown media type: " + tokens[0]);
 		}
