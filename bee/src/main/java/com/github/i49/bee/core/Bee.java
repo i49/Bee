@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,7 +24,7 @@ public class Bee {
 	
 	private static final Log log = LogFactory.getLog(Bee.class);
 	
-	private final List<SeedPage> seeds = new ArrayList<>();
+	private final List<Seed> seeds = new ArrayList<>();
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private WebDownloader downloader;
@@ -36,7 +35,7 @@ public class Bee {
 	public Bee() {
 	}
 
-	public List<SeedPage> getSeeds() {
+	public List<Seed> getSeeds() {
 		return seeds;
 	}
 	
@@ -50,20 +49,20 @@ public class Bee {
 		this.visited.clear();
 		try (WebDownloader downloader = new WebDownloader()) {
 			this.downloader = downloader;
-			visitAllSeeds(this.seeds);
+			makeAllTrips(this.seeds);
 			this.downloader = null;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	protected void visitAllSeeds(List<SeedPage> seeds) {
-		for (SeedPage seed: seeds) {
-			startOff(seed);
+	protected void makeAllTrips(List<Seed> seeds) {
+		for (Seed seed: seeds) {
+			makeTrip(seed);
 		}
 	}
 	
-	protected void startOff(SeedPage seed) {
+	protected void makeTrip(Seed seed) {
 		this.tasks.clear();
 		try {
 			URL location = new URL(seed.getLocation());
