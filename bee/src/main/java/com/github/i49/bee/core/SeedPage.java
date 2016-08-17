@@ -21,7 +21,7 @@ public class SeedPage {
 		return distanceLimit;
 	}
 	
-	public Place createPlace() throws MalformedURLException {
-		return new Place(new URL(getLocation()), 0);
+	public Task createPlace() throws MalformedURLException {
+		return new Task(new URL(getLocation()), 0);
 	}
 }

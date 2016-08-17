@@ -30,8 +30,8 @@ public class Bee {
 	
 	private WebDownloader downloader;
 	
-	private final LinkedList<Place> placesToVisit = new LinkedList<>();
-	private final Set<URL> history = new HashSet<URL>();
+	private final LinkedList<Task> tasks = new LinkedList<>();
+	private final Set<URL> visited = new HashSet<URL>();
 	
 	public Bee() {
 	}
@@ -46,8 +46,8 @@ public class Bee {
 	
 	public void visitAll() {
 		log.debug("Starting visitAll()");
-		this.placesToVisit.clear();
-		this.history.clear();
+		this.tasks.clear();
+		this.visited.clear();
 		try (WebDownloader downloader = new WebDownloader()) {
 			this.downloader = downloader;
 			visitAllSeeds(this.seeds);
@@ -59,78 +59,76 @@ public class Bee {
 	
 	protected void visitAllSeeds(List<SeedPage> seeds) {
 		for (SeedPage seed: seeds) {
-			startFromSeed(seed);
+			startOff(seed);
 		}
 	}
 	
-	protected void startFromSeed(SeedPage seed) {
+	protected void startOff(SeedPage seed) {
+		this.tasks.clear();
 		try {
-			this.placesToVisit.clear();
-			this.placesToVisit.add(seed.createPlace());
-			visitAllPlaces(seed.getDistanceLimit());
+			URL location = new URL(seed.getLocation());
+			this.tasks.add(new Task(location));
+			doAllTasks(seed.getDistanceLimit());
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	protected void visitAllPlaces(int distanceLimit) {
-		List<Place> placesFound = new ArrayList<>();
-		while (!this.placesToVisit.isEmpty()) {
-			Place place = this.placesToVisit.removeFirst();
-			visit(place.getLocation(), place.getDistance(), distanceLimit, placesFound);
-			if (placesFound.size() > 0) {
-				this.placesToVisit.addAll(0, placesFound);
-				placesFound.clear();
-			}
-		}
-	}
-
-	protected void visit(URL location, int distance, int distanceLimit, List<Place> placesFound) {
-		if (hasVisited(location)) {
-			return;
-		}
-		addToHistory(location);
-		WebResource resource = getResource(location, distance);
-		if (resource instanceof HtmlWebResource) {
-			parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit, placesFound);
+	protected void doAllTasks(int distanceLimit) {
+		while (!this.tasks.isEmpty()) {
+			Task task = this.tasks.removeFirst();
+			doTask(task, distanceLimit);
 		}
 	}
 	
-	protected void parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit, List<Place> placesFound) {
-		if (distance >= distanceLimit) {
-			return;
+	protected void doTask(Task task, int distanceLimit) {
+		if (hasVisited(task.getLocation())) {
+			task.setStatus(Task.Status.SKIPPED);
+		} else {
+			try {
+				List<URL> found = visit(task.getLocation(), task.getDistance(), distanceLimit);
+				if (found != null && found.size() > 0) {
+					addNewTasks(found, task.getDistance() + 1);
+				}
+				task.setStatus(Task.Status.DONE);
+			} catch (IOException | SAXException e) {
+				task.setStatus(Task.Status.FAILED);
+			}
 		}
-		final int nextDistance = distance + 1;
+		reportTaskResult(task);
+	}
+	
+	protected void addNewTasks(List<URL> found, int distance) {
+		for (int i = 0; i < found.size(); ++i) {
+			this.tasks.add(i, new Task(found.get(i), distance));
+		}
+	}
+	
+	protected List<URL> visit(URL location, int distance, int distanceLimit) throws IOException, SAXException {
+		List<URL> found = null;
+		addToHistory(location);
+		WebResource resource = getResource(location);
+		if (resource instanceof HtmlWebResource) {
+			found = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
+		}
+		return found;
+	}
+	
+	protected List<URL> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
+		if (distance >= distanceLimit) {
+			return null;
+		}
+		List<URL> found = new ArrayList<>();
 		for (URL link: resource.getOutboundLinks()) {
 			if (canVisit(link)) {
-				placesFound.add(new Place(link, nextDistance));
+				found.add(link);
 			}
 		}
+		return found;
 	}
 	
-	protected void planToVisit(URL current, URL next, int distance) {
-		if (!hasVisited(next) && canVisit(next)) {
-			this.placesToVisit.add(new Place(next, distance));
-		}
-	}
-	
-	protected WebResource getResource(URL location, int distance) {
-		log.info("[" + distance + "]" + location.toString());
-		try {
-			WebResource resource = this.downloader.download(location);
-			return resource;
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (SAXException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
-	protected static String repeat(char ch, int count) {
-		char[] chars = new char[count];
-		Arrays.fill(chars, ch);
-		return new String(chars);
+	protected WebResource getResource(URL location) throws IOException, SAXException {
+		return this.downloader.download(location);
 	}
 	
 	protected boolean canVisit(URL location) {
@@ -143,10 +141,26 @@ public class Bee {
 	}
 
 	protected void addToHistory(URL location) {
-		this.history.add(location);
+		this.visited.add(location);
 	}
 
 	protected boolean hasVisited(URL location) {
-		return this.history.contains(location);
+		return this.visited.contains(location);
+	}
+	
+	protected void reportTaskResult(Task task) {
+		String status = null;
+		switch (task.getStatus()) {
+		case DONE:
+			status = "+";
+			break;
+		case FAILED:
+			status = "!";
+			break;
+		default:
+			status = " ";
+			break;
+		}
+		log.info("[" + task.getDistance() + "]" + status + task.getLocation().toString());
 	}
 }
