@@ -57,13 +57,12 @@ public class Bee {
 	}
 	
 	protected void makeAllTrips(List<Seed> seeds) {
-		for (Seed seed: seeds) {
+		for (Seed seed : seeds) {
 			makeTrip(seed);
 		}
 	}
 	
 	protected void makeTrip(Seed seed) {
-		this.tasks.clear();
 		URI location;
 		try {
 			location = new URI(seed.getLocation());
@@ -71,6 +70,7 @@ public class Bee {
 			e.printStackTrace();
 			return;
 		}
+		this.tasks.clear();
 		this.tasks.add(new Task(location));
 		doAllTasks(seed.getDistanceLimit());
 	}
@@ -78,25 +78,28 @@ public class Bee {
 	protected void doAllTasks(int distanceLimit) {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
-			doTask(task, distanceLimit);
+			List<URI> found = doTask(task, distanceLimit);
+			if (found != null && found.size() > 0) {
+				addNewTasks(found, task.getDistance() + 1);
+			}
 		}
 	}
 	
-	protected void doTask(Task task, int distanceLimit) {
+	protected List<URI> doTask(Task task, int distanceLimit) {
+		List<URI> found = null;
 		if (hasVisited(task.getLocation())) {
 			task.setStatus(Task.Status.SKIPPED);
 		} else {
 			try {
-				List<URI> found = visit(task.getLocation(), task.getDistance(), distanceLimit);
-				if (found != null && found.size() > 0) {
-					addNewTasks(found, task.getDistance() + 1);
-				}
+				found = visit(task.getLocation(), task.getDistance(), distanceLimit);
 				task.setStatus(Task.Status.DONE);
 			} catch (IOException | SAXException e) {
+				log.error(e.getMessage());
 				task.setStatus(Task.Status.FAILED);
 			}
 		}
 		reportTaskResult(task);
+		return found;
 	}
 	
 	protected void addNewTasks(List<URI> found, int distance) {
@@ -120,9 +123,9 @@ public class Bee {
 			return null;
 		}
 		List<URI> found = new ArrayList<>();
-		for (URI link: resource.getOutboundLinks()) {
-			if (canVisit(link)) {
-				found.add(link);
+		for (URI page : resource.getLinkedPages()) {
+			if (canVisit(page)) {
+				found.add(page);
 			}
 		}
 		return found;

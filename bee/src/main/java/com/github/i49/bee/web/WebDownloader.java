@@ -31,8 +31,7 @@ public class WebDownloader implements AutoCloseable {
 			if (code == HttpStatus.SC_OK) {
 				return createWebResource(location, response.getEntity());
 			} else {
-				log.debug("HTTP status code = " + code);
-				return null;
+				throw new IOException("Failed to get " + location.toString() + " (" + code + ")");
 			}
 		}
 	}

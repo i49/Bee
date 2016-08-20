@@ -7,6 +7,7 @@ public enum MediaType {
 	
 	TEXT_PLAIN("text", "plain"),
 	TEXT_HTML("text", "html"),
+	TEXT_TURTLE("text", "turtle"),
 	APPLICATION_XHTML_XML("appliaction", "xhtml+xml"),
 	APPLICATION_XML("application", "xml"),
 	APPLICATION_JSON("application", "json");
@@ -19,6 +20,7 @@ public enum MediaType {
 	static {
 		add(TEXT_PLAIN);
 		add(TEXT_HTML);
+		add(TEXT_TURTLE);
 		add(APPLICATION_XHTML_XML);
 		add(APPLICATION_XML);
 		add(APPLICATION_JSON);
