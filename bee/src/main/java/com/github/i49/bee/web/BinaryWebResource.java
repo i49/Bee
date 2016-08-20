@@ -1,15 +1,15 @@
 package com.github.i49.bee.web;
 
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 
 public class BinaryWebResource implements WebResource {
 
-	private final URL location;
+	private final URI location;
 	private final MediaType mediaType;
 	
 	@Override
-	public URL getLocation() {
+	public URI getLocation() {
 		return location;
 	}
 
@@ -18,12 +18,12 @@ public class BinaryWebResource implements WebResource {
 		return mediaType;
 	}
 
-	protected BinaryWebResource(URL location, MediaType mediaType) {
+	protected BinaryWebResource(URI location, MediaType mediaType) {
 		this.location = location;
 		this.mediaType = mediaType;
 	}
 	
-	public static BinaryWebResource contentOf(URL location, MediaType mediaType, InputStream stream) {
+	public static BinaryWebResource contentOf(URI location, MediaType mediaType, InputStream stream) {
 		return new BinaryWebResource(location, mediaType);
 	}
 }

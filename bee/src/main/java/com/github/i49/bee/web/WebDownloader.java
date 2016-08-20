@@ -2,7 +2,7 @@ package com.github.i49.bee.web;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,7 +24,7 @@ public class WebDownloader implements AutoCloseable {
 		this.httpClient = HttpClients.createDefault();
 	}
 	
-	public WebResource download(URL location) throws IOException, SAXException {
+	public WebResource download(URI location) throws IOException, SAXException {
 		HttpGet request = new HttpGet(location.toString());
 		try (CloseableHttpResponse response = this.httpClient.execute(request)) {
 			final int code = response.getStatusLine().getStatusCode();
@@ -37,7 +37,7 @@ public class WebDownloader implements AutoCloseable {
 		}
 	}
 	
-	private WebResource createWebResource(URL location, HttpEntity entity) throws IOException, SAXException {
+	private WebResource createWebResource(URI location, HttpEntity entity) throws IOException, SAXException {
 		String contentType = entity.getContentType().getValue();
 		MediaType mediaType = parseMediaType(contentType);
 		if (mediaType == null) {

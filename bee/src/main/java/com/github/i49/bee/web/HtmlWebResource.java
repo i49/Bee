@@ -2,10 +2,12 @@ package com.github.i49.bee.web;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -20,16 +22,16 @@ public class HtmlWebResource implements WebResource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
 
-	private final URL location;
+	private final URI location;
 	private final Document document;
 	
-	protected HtmlWebResource(URL location, Document document) {
+	protected HtmlWebResource(URI location, Document document) {
 		this.location = location;
 		this.document = document;
 	}
 	
 	@Override
-	public URL getLocation() {
+	public URI getLocation() {
 		return location;
 	}
 	
@@ -42,25 +44,36 @@ public class HtmlWebResource implements WebResource {
 		return document;
 	}
 	
-	public List<URL> getOutboundLinks() {
-		List<URL> links = new ArrayList<>();
+	public List<URI> getOutboundLinks() {
+		List<URI> links = new ArrayList<>();
+		Set<URI> found = new HashSet<>();
 		NodeList nodes = this.document.getElementsByTagName("a");
 		for (int i = 0; i < nodes.getLength(); i++) {
 			Element element = (Element)nodes.item(i);
-			String href = element.getAttribute("href");
-			if (!href.isEmpty() && !href.startsWith("#")) {
+			String value = element.getAttribute("href");
+			if (!value.isEmpty() && !value.startsWith("#")) {
+				URI target = null;
 				try {
-					URL target = new URL(getLocation(), href);
-					links.add(target);
-				} catch (MalformedURLException e) {
-					log.warn("Invalid href value: " + href);
+					target = new URI(value);
+				} catch (URISyntaxException e) {
+					log.info("Invalid link target: " + value);
+					continue;
 				}
+				if (target.isOpaque()) {
+					continue;
+				}
+				URI absolute = getLocation().resolve(target);
+				if (found.contains(absolute)) {
+					continue;
+				}
+				links.add(absolute);
+				found.add(absolute);
 			}
 		}
 		return links;
 	}
 	
-	public static HtmlWebResource contentOf(URL location, InputStream stream) throws SAXException, IOException {
+	public static HtmlWebResource contentOf(URI location, InputStream stream) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		Document document = builder.parse(stream);
 		return new HtmlWebResource(location, document);

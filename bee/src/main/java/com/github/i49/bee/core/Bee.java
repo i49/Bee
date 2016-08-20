@@ -1,8 +1,8 @@
 package com.github.i49.bee.core;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -30,7 +30,7 @@ public class Bee {
 	private WebDownloader downloader;
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
-	private final Set<URL> visited = new HashSet<URL>();
+	private final Set<URI> visited = new HashSet<URI>();
 	
 	public Bee() {
 	}
@@ -64,13 +64,15 @@ public class Bee {
 	
 	protected void makeTrip(Seed seed) {
 		this.tasks.clear();
+		URI location;
 		try {
-			URL location = new URL(seed.getLocation());
-			this.tasks.add(new Task(location));
-			doAllTasks(seed.getDistanceLimit());
-		} catch (MalformedURLException e) {
+			location = new URI(seed.getLocation());
+		} catch (URISyntaxException e) {
 			e.printStackTrace();
+			return;
 		}
+		this.tasks.add(new Task(location));
+		doAllTasks(seed.getDistanceLimit());
 	}
 	
 	protected void doAllTasks(int distanceLimit) {
@@ -85,7 +87,7 @@ public class Bee {
 			task.setStatus(Task.Status.SKIPPED);
 		} else {
 			try {
-				List<URL> found = visit(task.getLocation(), task.getDistance(), distanceLimit);
+				List<URI> found = visit(task.getLocation(), task.getDistance(), distanceLimit);
 				if (found != null && found.size() > 0) {
 					addNewTasks(found, task.getDistance() + 1);
 				}
@@ -97,14 +99,14 @@ public class Bee {
 		reportTaskResult(task);
 	}
 	
-	protected void addNewTasks(List<URL> found, int distance) {
+	protected void addNewTasks(List<URI> found, int distance) {
 		for (int i = 0; i < found.size(); ++i) {
 			this.tasks.add(i, new Task(found.get(i), distance));
 		}
 	}
 	
-	protected List<URL> visit(URL location, int distance, int distanceLimit) throws IOException, SAXException {
-		List<URL> found = null;
+	protected List<URI> visit(URI location, int distance, int distanceLimit) throws IOException, SAXException {
+		List<URI> found = null;
 		addToHistory(location);
 		WebResource resource = getResource(location);
 		if (resource instanceof HtmlWebResource) {
@@ -113,12 +115,12 @@ public class Bee {
 		return found;
 	}
 	
-	protected List<URL> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
+	protected List<URI> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
 		if (distance >= distanceLimit) {
 			return null;
 		}
-		List<URL> found = new ArrayList<>();
-		for (URL link: resource.getOutboundLinks()) {
+		List<URI> found = new ArrayList<>();
+		for (URI link: resource.getOutboundLinks()) {
 			if (canVisit(link)) {
 				found.add(link);
 			}
@@ -126,11 +128,11 @@ public class Bee {
 		return found;
 	}
 	
-	protected WebResource getResource(URL location) throws IOException, SAXException {
+	protected WebResource getResource(URI location) throws IOException, SAXException {
 		return this.downloader.download(location);
 	}
 	
-	protected boolean canVisit(URL location) {
+	protected boolean canVisit(URI location) {
 		for (WebSite site : this.sites) {
 			if (site.contains(location)) {
 				return true;
@@ -139,11 +141,11 @@ public class Bee {
 		return false;
 	}
 
-	protected void addToHistory(URL location) {
+	protected void addToHistory(URI location) {
 		this.visited.add(location);
 	}
 
-	protected boolean hasVisited(URL location) {
+	protected boolean hasVisited(URI location) {
 		return this.visited.contains(location);
 	}
 	

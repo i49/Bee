@@ -1,6 +1,6 @@
 package com.github.i49.bee.core;
 
-import java.net.URL;
+import java.net.URI;
 
 /**
  * Task to be done by bee.
@@ -14,21 +14,21 @@ public class Task {
 		DONE
 	};
 	
-	private final URL location;
+	private final URI location;
 	private final int distance;
 	private Status status;
 	
-	public Task(URL location) {
+	public Task(URI location) {
 		this(location, 0);
 	}
 	
-	public Task(URL location, int distance) {
+	public Task(URI location, int distance) {
 		this.location = location;
 		this.distance = distance;
 		this.status = Status.WAITING;
 	}
 
-	public URL getLocation() {
+	public URI getLocation() {
 		return location;
 	}
 

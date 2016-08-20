@@ -1,6 +1,6 @@
 package com.github.i49.bee.core;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,13 +35,13 @@ public class WebSite {
 		return excludes;
 	}
 
-	public boolean contains(URL location) {
+	public boolean contains(URI location) {
 		if (!location.getHost().equals(this.host))
 			return false;
 		if (this.port != -1) {
 			int port = location.getPort();
 			if (port == -1) {
-				port = location.getDefaultPort();
+				port = getDefaultPort(location.getScheme());
 			}
 			if (port != this.port) {
 				return false;
@@ -49,6 +49,15 @@ public class WebSite {
 		}
 		
 		return containsPath(location.getPath());
+	}
+	
+	private static int getDefaultPort(String scheme) {
+		if (scheme.equals("http")) {
+			return 80;
+		} else if (scheme.equals("https")) {
+			return 443;
+		}
+		return -1;
 	}
 	
 	private boolean containsPath(String path) {

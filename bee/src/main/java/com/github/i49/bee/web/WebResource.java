@@ -1,10 +1,10 @@
 package com.github.i49.bee.web;
 
-import java.net.URL;
+import java.net.URI;
 
 public interface WebResource {
 
-	URL getLocation();
+	URI getLocation();
 	
 	MediaType getMediaType();
 }
