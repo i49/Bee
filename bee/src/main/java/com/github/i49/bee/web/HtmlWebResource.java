@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -43,7 +44,7 @@ public class HtmlWebResource implements WebResource {
 		return document;
 	}
 
-	public Iterable<URI> getLinkedPages() {
+	public Collection<URI> getLinkedPages() {
 		LinkedHashSet<URI> result = new LinkedHashSet<>();
 		for (URI link : getOutboundLinks()) {
 			URI page = withoutFragment(link);
@@ -54,10 +55,22 @@ public class HtmlWebResource implements WebResource {
 		return result;
 	}
 	
-	public List<URI> getOutboundLinks() {
+	public Collection<URI> getOutboundLinks() {
 		List<URI> result = new ArrayList<>();
 		for (Element e : findElementsByName("a")) {
 			String value = e.getAttribute("href");
+			URI link = resolve(correctLink(value));
+			if (link != null && !link.isOpaque()) {
+				result.add(link);
+			}
+		}
+		return result;
+	}
+	
+	public Collection<URI> getImageLinks() {
+		LinkedHashSet<URI> result = new LinkedHashSet<>();
+		for (Element e : findElementsByName("img")) {
+			String value = e.getAttribute("src");
 			URI link = resolve(value);
 			if (link != null && !link.isOpaque()) {
 				result.add(link);
@@ -66,13 +79,22 @@ public class HtmlWebResource implements WebResource {
 		return result;
 	}
 	
-	private List<Element> findElementsByName(String name) {
+	private Iterable<Element> findElementsByName(String name) {
 		List<Element> result = new ArrayList<>();
 		NodeList nodes = this.document.getElementsByTagName(name);
 		for (int i = 0; i < nodes.getLength(); i++) {
 			result.add((Element)nodes.item(i));
 		}
 		return result;
+	}
+	
+	private static String correctLink(String value) {
+		String[] parts = value.split("#");
+		if (parts.length < 2) {
+			return value;
+		}
+		String fragment = parts[1].replaceAll(" ", "%20");
+		return String.join("#", parts[0], fragment);
 	}
 
 	private URI resolve(String value) {

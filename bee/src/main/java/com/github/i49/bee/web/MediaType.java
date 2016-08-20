@@ -10,7 +10,10 @@ public enum MediaType {
 	TEXT_TURTLE("text", "turtle"),
 	APPLICATION_XHTML_XML("appliaction", "xhtml+xml"),
 	APPLICATION_XML("application", "xml"),
-	APPLICATION_JSON("application", "json");
+	APPLICATION_JSON("application", "json"),
+	IMAGE_PNG("image", "png"),
+	IMAGE_JPEG("image", "jpeg"),
+	IMAGE_GIF("image", "gif");
 
 	private final String type;
 	private final String subtype;
@@ -24,6 +27,9 @@ public enum MediaType {
 		add(APPLICATION_XHTML_XML);
 		add(APPLICATION_XML);
 		add(APPLICATION_JSON);
+		add(IMAGE_PNG);
+		add(IMAGE_JPEG);
+		add(IMAGE_GIF);
 	}
 	
 	MediaType(String type, String subtype) {

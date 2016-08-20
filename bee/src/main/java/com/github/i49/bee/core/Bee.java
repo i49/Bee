@@ -122,13 +122,18 @@ public class Bee {
 		if (distance >= distanceLimit) {
 			return null;
 		}
-		List<URI> found = new ArrayList<>();
-		for (URI page : resource.getLinkedPages()) {
-			if (canVisit(page)) {
-				found.add(page);
+		List<URI> links = new ArrayList<>();
+		for (URI image: resource.getImageLinks()) {
+			if (canVisit(image)) {
+				links.add(image);
 			}
 		}
-		return found;
+		for (URI page : resource.getLinkedPages()) {
+			if (canVisit(page)) {
+				links.add(page);
+			}
+		}
+		return links;
 	}
 	
 	protected WebResource getResource(URI location) throws IOException, SAXException {
