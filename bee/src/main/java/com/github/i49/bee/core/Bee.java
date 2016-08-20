@@ -43,8 +43,8 @@ public class Bee {
 		return sites;
 	}
 	
-	public void visitAll() {
-		log.debug("Starting visitAll()");
+	public void launch() {
+		log.debug("Bee launched.");
 		this.tasks.clear();
 		this.visited.clear();
 		try (WebDownloader downloader = new WebDownloader()) {
@@ -131,7 +131,7 @@ public class Bee {
 	}
 	
 	protected boolean canVisit(URL location) {
-		for (WebSite site: this.sites) {
+		for (WebSite site : this.sites) {
 			if (site.contains(location)) {
 				return true;
 			}

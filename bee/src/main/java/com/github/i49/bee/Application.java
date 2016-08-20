@@ -16,7 +16,7 @@ public class Application implements ApplicationRunner {
 	
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
-		bee.visitAll();
+		bee.launch();
 	}
 	
 	public static void main(String[] args) {

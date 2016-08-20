@@ -11,7 +11,8 @@ public class WebSite {
 
 	private final String host;
 	private final int port;
-	private final List<String> paths = new ArrayList<>();
+	private final List<String> includes = new ArrayList<>();
+	private final List<String> excludes = new ArrayList<>();
 	
 	public WebSite(String host, int port) {
 		this.host = host;
@@ -26,14 +27,17 @@ public class WebSite {
 		return port;
 	}
 	
-	public List<String> getPaths() {
-		return paths;
+	public List<String> getIncludes() {
+		return includes;
+	}
+	
+	public List<String> getExcludes() {
+		return excludes;
 	}
 
 	public boolean contains(URL location) {
-		if (!location.getHost().equals(this.host)) {
+		if (!location.getHost().equals(this.host))
 			return false;
-		}
 		if (this.port != -1) {
 			int port = location.getPort();
 			if (port == -1) {
@@ -43,15 +47,29 @@ public class WebSite {
 				return false;
 			}
 		}
+		
 		return containsPath(location.getPath());
 	}
 	
-	public boolean containsPath(String path) {
-		if (this.paths.size() == 0) {
+	private boolean containsPath(String path) {
+		return (includes(path) && !excludes(path));
+	}
+	
+	private boolean includes(String path) {
+		if (this.includes.isEmpty()) {
 			return true;
 		}
-		for (String prefix : this.paths) {
-			if (path.startsWith(prefix)) {
+		for (String directory : this.includes) {
+			if (path.startsWith(directory)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean excludes(String path) {
+		for (String directory : this.excludes) {
+			if (path.startsWith(directory)) {
 				return true;
 			}
 		}
@@ -60,9 +78,10 @@ public class WebSite {
 
 	@Override
 	public String toString() {
-		if (port == -1)
+		if (port == -1) {
 			return host;
-		else
+		} else {
 			return host + ":" + port;
+		}
 	}
 }

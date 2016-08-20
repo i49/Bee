@@ -64,5 +64,6 @@ public class WebDownloader implements AutoCloseable {
 	@Override
 	public void close() throws IOException {
 		this.httpClient.close();
+		log.debug("HTTP client was gracefully closed.");
 	}
 }

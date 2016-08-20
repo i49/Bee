@@ -64,7 +64,7 @@ public class BuzzParser {
 	private void configureSeeds(List<Seed> seeds, JsonNode nodes) {
 		Set<String> supported = fields("location", "distance");
 		Set<String> required = fields("location");
-		for (JsonNode node: nodes) {
+		for (JsonNode node : nodes) {
 			validateNode(node, supported, required);
 			String location = node.path("location").textValue();
 			int distance = node.path("distance").intValue();
@@ -74,23 +74,28 @@ public class BuzzParser {
 	}
 	
 	private void configureSites(List<WebSite> sites, JsonNode nodes) {
-		Set<String> supported = fields("host", "port", "paths");
+		Set<String> supported = fields("host", "port", "includes", "excludes");
 		Set<String> required = fields("host");
-		for (JsonNode node: nodes) {
+		for (JsonNode node : nodes) {
 			validateNode(node, supported, required);
 			String host = node.path("host").textValue();
 			int port = -1;
-			if (node.hasNonNull("port"))
+			if (node.hasNonNull("port")) {
 				port = node.get("port").intValue();
-			WebSite site = new WebSite(host, port);
-			JsonNode pathsNode = node.path("paths");
-			if (pathsNode.isArray()) {
-				for (JsonNode pathNode: pathsNode) {
-					String path = pathNode.textValue().trim();
-					site.getPaths().add(path);
-				}
 			}
+			WebSite site = new WebSite(host, port);
+			configureSiteDirectories(site.getIncludes(), node.get("includes"));
+			configureSiteDirectories(site.getExcludes(), node.get("excludes"));
 			sites.add(site);
+		}
+	}
+	
+	private void configureSiteDirectories(List<String> directories, JsonNode nodes) {
+		if (nodes != null && nodes.isArray()) {
+			for (JsonNode node : nodes) {
+				String path = node.textValue().trim();
+				directories.add(path);
+			}
 		}
 	}
 	
