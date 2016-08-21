@@ -51,18 +51,16 @@ public class Bee {
 	
 	public void launch() {
 		log.debug("Bee launched.");
-		prepareForTrips();
-		try (WebDownloader downloader = new WebDownloader()) {
-			this.downloader = downloader;
+		try {
+			prepareTrips();
 			makeAllTrips(this.seeds);
-			this.downloader = null;
+			finishTrips();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		this.reporter.reportTotalResult(this.stats);
 	}
 	
-	protected void prepareForTrips() {
+	protected void prepareTrips() throws IOException {
 		this.stats = new BeeStatistics();
 		if (this.reporter == null) {
 			this.reporter = createDefaultReporter();
@@ -75,10 +73,21 @@ public class Bee {
 		this.visited.clear();
 	}
 	
+	protected void finishTrips() throws IOException {
+		this.hive.close();
+	}
+	
 	protected void makeAllTrips(List<Seed> seeds) {
-		for (Seed seed : seeds) {
-			makeTrip(seed);
+		try (WebDownloader downloader = new WebDownloader()) {
+			this.downloader = downloader;
+			for (Seed seed : seeds) {
+				makeTrip(seed);
+			}
+			this.downloader = null;
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+		this.reporter.reportTotalResult(this.stats);
 	}
 	
 	protected void makeTrip(Seed seed) {
@@ -162,7 +171,7 @@ public class Bee {
 		return this.downloader.download(location);
 	}
 
-	protected void storeResource(WebResource resource) {
+	protected void storeResource(WebResource resource) throws IOException {
 		this.hive.store(resource);
 	}
 	

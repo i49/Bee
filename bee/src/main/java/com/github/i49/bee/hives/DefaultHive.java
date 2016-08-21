@@ -1,5 +1,7 @@
 package com.github.i49.bee.hives;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -25,23 +27,25 @@ public class DefaultHive implements Hive {
 	}
 
 	@Override
-	public void open() {
+	public void open() throws IOException {
 		if (this.layout == null) {
 			this.layout = createDefaultLayout();
 		}
 		if (this.storage == null) {
 			this.storage = createDefaultStorage();
 		}
+		this.storage.open(this.basePath);
 	}
 
 	@Override
-	public void close() {
+	public void close() throws IOException {
+		this.storage.close();
 	}
 
 	@Override
-	public void store(WebResource resource) {
+	public void store(WebResource resource) throws IOException {
 		String path = this.layout.mapPath(resource.getInitialLocation());
-		log.debug("Stored at " + path);
+		this.storage.saveResourceAt(path, resource);
 	}
 
 	protected Layout createDefaultLayout() {

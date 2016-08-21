@@ -4,6 +4,10 @@ import java.net.URI;
 
 public class HostBaseLayout implements Layout {
 
+	private static final String DEFAULT_INDEX_NAME = "index.html";
+	
+	private String indexName = DEFAULT_INDEX_NAME;
+
 	@Override
 	public String mapPath(URI location) {
 		StringBuilder builder = new StringBuilder("/");
@@ -14,7 +18,11 @@ public class HostBaseLayout implements Layout {
 		} else {
 			builder.append("-");
 		}
-		builder.append(location.getPath());
+		final String path = location.getPath();
+		builder.append(path);
+		if (path.endsWith("/")) {
+			builder.append(this.indexName);
+		}
 		return builder.toString();
 	}
 }
