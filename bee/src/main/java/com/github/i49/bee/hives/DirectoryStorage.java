@@ -1,6 +1,7 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -34,7 +35,13 @@ public class DirectoryStorage implements Storage {
 	@Override
 	public void saveResourceAt(String path, WebResource resource) throws IOException {
 		Path fullpath = this.root.resolve(path.substring(1)).toAbsolutePath();
-		log.debug("Stored at " + fullpath.toString());
 		Files.createDirectories(fullpath.getParent());
+		try (OutputStream stream = Files.newOutputStream(fullpath)) {
+			byte[] content = resource.getContent();
+			if (content != null) {
+				stream.write(content);
+			}
+		}
+		log.debug("Stored at " + path.toString());
 	}
 }

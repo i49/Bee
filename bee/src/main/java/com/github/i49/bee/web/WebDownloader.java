@@ -14,7 +14,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.xml.sax.SAXException;
+import org.apache.http.util.EntityUtils;
 
 public class WebDownloader implements AutoCloseable {
 
@@ -26,7 +26,7 @@ public class WebDownloader implements AutoCloseable {
 		this.httpClient = HttpClients.createDefault();
 	}
 	
-	public WebResource download(URI location) throws IOException, SAXException {
+	public WebResource download(URI location) throws Exception {
 		HttpGet request = new HttpGet(location);
 		HttpClientContext context = new HttpClientContext();
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
@@ -49,30 +49,28 @@ public class WebDownloader implements AutoCloseable {
 		}
 	}
 	
-	private WebResource createWebResource(URI initialLocation, URI finalLocation, HttpEntity entity) throws IOException, SAXException {
+	private WebResource createWebResource(URI initialLocation, URI finalLocation, HttpEntity entity) throws Exception {
 		String contentType = entity.getContentType().getValue();
 		MediaType mediaType = parseMediaType(contentType);
-		if (mediaType == null) {
-			return null;
-		}
-		try (InputStream stream = entity.getContent()) {
-			if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
+		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
+			try (InputStream stream = entity.getContent()) {
 				return HtmlWebResource.contentOf(initialLocation, finalLocation, stream);
-			} else {
-				return BinaryWebResource.contentOf(initialLocation, finalLocation, mediaType, stream);
 			}
+		} else {
+			byte[] content = EntityUtils.toByteArray(entity);
+			return BinaryWebResource.contentOf(initialLocation, finalLocation, mediaType, content);
 		}
 	}
 	
-	private static MediaType parseMediaType(String contentType) {
+	private static MediaType parseMediaType(String contentType) throws UnsupportedMediaException {
 		String[] tokens = contentType.split(";");
 		MediaType mediaType = MediaType.of(tokens[0]);
 		if (mediaType == null) {
-			log.error("Unknown media type: " + tokens[0]);
+			throw new UnsupportedMediaException("Unsupported media type: " + tokens[0]);
 		}
 		return mediaType;
 	}
-
+	
 	@Override
 	public void close() throws IOException {
 		this.httpClient.close();

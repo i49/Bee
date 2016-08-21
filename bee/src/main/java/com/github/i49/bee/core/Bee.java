@@ -11,7 +11,6 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.xml.sax.SAXException;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
@@ -122,7 +121,7 @@ public class Bee {
 				found = visit(task.getLocation(), task.getDistance(), distanceLimit);
 				task.setStatus(Task.Status.DONE);
 				this.stats.successes++;
-			} catch (IOException | SAXException e) {
+			} catch (Exception e) {
 				log.error(e.getMessage());
 				task.setStatus(Task.Status.FAILED);
 				this.stats.failures++;
@@ -138,10 +137,10 @@ public class Bee {
 		}
 	}
 	
-	protected List<URI> visit(URI location, int distance, int distanceLimit) throws IOException, SAXException {
+	protected List<URI> visit(URI location, int distance, int distanceLimit) throws Exception {
 		List<URI> found = null;
 		addToHistory(location);
-		WebResource resource = getResource(location);
+		WebResource resource = retrieveResource(location);
 		if (resource instanceof HtmlWebResource) {
 			found = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
 		}
@@ -167,7 +166,7 @@ public class Bee {
 		return links;
 	}
 	
-	protected WebResource getResource(URI location) throws IOException, SAXException {
+	protected WebResource retrieveResource(URI location) throws Exception {
 		return this.downloader.download(location);
 	}
 

@@ -1,13 +1,22 @@
 package com.github.i49.bee.web;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,9 +30,10 @@ import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 public class HtmlWebResource extends AbstractWebResource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
+	private static final TransformerFactory transformFactory = TransformerFactory.newInstance();
 
 	private final Document document;
-	
+
 	protected HtmlWebResource(URI initialLocation, URI finalLocation, Document document) {
 		super(initialLocation, finalLocation, MediaType.APPLICATION_XHTML_XML);
 		this.document = document;
@@ -31,6 +41,18 @@ public class HtmlWebResource extends AbstractWebResource {
 	
 	public Document getDocument() {
 		return document;
+	}
+
+	@Override
+	public byte[] getContent() {
+		ByteArrayOutputStream stream = new ByteArrayOutputStream();
+		try {
+			transformTo(stream);
+			return stream.toByteArray();
+		} catch (TransformerException e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	public Collection<URI> getLinkedPages() {
@@ -108,6 +130,13 @@ public class HtmlWebResource extends AbstractWebResource {
 		} catch (URISyntaxException e) {
 			return null;
 		}
+	}
+	
+	private void transformTo(OutputStream stream) throws TransformerException {
+		Transformer transformer = transformFactory.newTransformer();
+		Source source = new DOMSource(getDocument());
+		StreamResult result = new StreamResult(stream);
+		transformer.transform(source, result);
 	}
 	
 	public static HtmlWebResource contentOf(URI initialLocation, URI finalLocation, InputStream stream) throws SAXException, IOException {

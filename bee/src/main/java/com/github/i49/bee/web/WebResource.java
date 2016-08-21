@@ -9,4 +9,6 @@ public interface WebResource {
 	URI getFinalLocation();
 	
 	MediaType getMediaType();
+	
+	byte[] getContent();
 }
