@@ -3,27 +3,13 @@ package com.github.i49.bee.web;
 import java.io.InputStream;
 import java.net.URI;
 
-public class BinaryWebResource implements WebResource {
+public class BinaryWebResource extends AbstractWebResource {
 
-	private final URI location;
-	private final MediaType mediaType;
-	
-	@Override
-	public URI getLocation() {
-		return location;
-	}
-
-	@Override
-	public MediaType getMediaType() {
-		return mediaType;
-	}
-
-	protected BinaryWebResource(URI location, MediaType mediaType) {
-		this.location = location;
-		this.mediaType = mediaType;
+	protected BinaryWebResource(URI initialLocation, URI finalLocation, MediaType mediaType) {
+		super(initialLocation, finalLocation, mediaType);
 	}
 	
-	public static BinaryWebResource contentOf(URI location, MediaType mediaType, InputStream stream) {
-		return new BinaryWebResource(location, mediaType);
+	public static BinaryWebResource contentOf(URI initialLocation, URI finalLocation, MediaType mediaType, InputStream stream) {
+		return new BinaryWebResource(initialLocation, finalLocation, mediaType);
 	}
 }

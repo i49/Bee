@@ -4,7 +4,9 @@ import java.net.URI;
 
 public interface WebResource {
 
-	URI getLocation();
+	URI getInitialLocation();
+	
+	URI getFinalLocation();
 	
 	MediaType getMediaType();
 }

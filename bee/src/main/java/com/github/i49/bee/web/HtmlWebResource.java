@@ -18,26 +18,15 @@ import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
-public class HtmlWebResource implements WebResource {
+public class HtmlWebResource extends AbstractWebResource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
 
-	private final URI location;
 	private final Document document;
 	
-	protected HtmlWebResource(URI location, Document document) {
-		this.location = location;
+	protected HtmlWebResource(URI initialLocation, URI finalLocation, Document document) {
+		super(initialLocation, finalLocation, MediaType.APPLICATION_XHTML_XML);
 		this.document = document;
-	}
-	
-	@Override
-	public URI getLocation() {
-		return location;
-	}
-	
-	@Override
-	public MediaType getMediaType() {
-		return MediaType.APPLICATION_XHTML_XML;
 	}
 	
 	public Document getDocument() {
@@ -48,7 +37,7 @@ public class HtmlWebResource implements WebResource {
 		LinkedHashSet<URI> result = new LinkedHashSet<>();
 		for (URI link : getOutboundLinks()) {
 			URI page = withoutFragment(link);
-			if (page != null && !page.equals(getLocation())) {
+			if (page != null && !page.equals(getInitialLocation())) {
 				result.add(page);
 			}
 		}
@@ -100,12 +89,12 @@ public class HtmlWebResource implements WebResource {
 	private URI resolve(String value) {
 		value = value.trim();
 		if (value.isEmpty() || value.equals("#")) {
-			return getLocation();
+			return getFinalLocation();
 		}
 		try {
-			return getLocation().resolve(value);
+			return getFinalLocation().resolve(value);
 		} catch (IllegalArgumentException e) {
-			log.debug("Failed to resolve " + value + " by " + getLocation().toString());
+			log.debug("Failed to resolve " + value + " on " + getInitialLocation().toString());
 			return null;
 		}
 	}
@@ -121,9 +110,9 @@ public class HtmlWebResource implements WebResource {
 		}
 	}
 	
-	public static HtmlWebResource contentOf(URI location, InputStream stream) throws SAXException, IOException {
+	public static HtmlWebResource contentOf(URI initialLocation, URI finalLocation, InputStream stream) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		Document document = builder.parse(stream);
-		return new HtmlWebResource(location, document);
+		return new HtmlWebResource(initialLocation, finalLocation, document);
 	}
 }
