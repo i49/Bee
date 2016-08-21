@@ -32,6 +32,9 @@ public class Bee {
 	private final LinkedList<Task> tasks = new LinkedList<>();
 	private final Set<URI> visited = new HashSet<URI>();
 	
+	private BeeStatistics stats;
+	private Reporter reporter;
+
 	public Bee() {
 	}
 
@@ -45,8 +48,7 @@ public class Bee {
 	
 	public void launch() {
 		log.debug("Bee launched.");
-		this.tasks.clear();
-		this.visited.clear();
+		prepareForTrips();
 		try (WebDownloader downloader = new WebDownloader()) {
 			this.downloader = downloader;
 			makeAllTrips(this.seeds);
@@ -54,6 +56,16 @@ public class Bee {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		this.reporter.reportTotalResult(this.stats);
+	}
+	
+	protected void prepareForTrips() {
+		this.stats = new BeeStatistics();
+		if (this.reporter == null) {
+			this.reporter = new DefaultReporter();
+		}
+		this.tasks.clear();
+		this.visited.clear();
 	}
 	
 	protected void makeAllTrips(List<Seed> seeds) {
@@ -93,12 +105,14 @@ public class Bee {
 			try {
 				found = visit(task.getLocation(), task.getDistance(), distanceLimit);
 				task.setStatus(Task.Status.DONE);
+				this.stats.successes++;
 			} catch (IOException | SAXException e) {
 				log.error(e.getMessage());
 				task.setStatus(Task.Status.FAILED);
+				this.stats.failures++;
 			}
 		}
-		reportTaskResult(task);
+		this.reporter.reportTaskResult(task);
 		return found;
 	}
 	
@@ -156,20 +170,20 @@ public class Bee {
 	protected boolean hasVisited(URI location) {
 		return this.visited.contains(location);
 	}
-	
-	protected void reportTaskResult(Task task) {
-		String status = null;
-		switch (task.getStatus()) {
-		case DONE:
-			status = "+";
-			break;
-		case FAILED:
-			status = "!";
-			break;
-		default:
-			status = " ";
-			break;
+
+	private static class BeeStatistics implements Statistics {
+
+		private int successes;
+		private int failures;
+		
+		@Override
+		public int getSuccesses() {
+			return successes;
 		}
-		log.info("[" + task.getDistance() + "]" + status + task.getLocation().toString());
+
+		@Override
+		public int getFailures() {
+			return failures;
+		}
 	}
 }
