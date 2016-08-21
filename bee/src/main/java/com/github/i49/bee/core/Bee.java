@@ -13,6 +13,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.xml.sax.SAXException;
 
+import com.github.i49.bee.hives.DefaultHive;
+import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.web.HtmlWebResource;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
@@ -28,6 +30,7 @@ public class Bee {
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private WebDownloader downloader;
+	private Hive hive; 
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
 	private final Set<URI> visited = new HashSet<URI>();
@@ -62,8 +65,12 @@ public class Bee {
 	protected void prepareForTrips() {
 		this.stats = new BeeStatistics();
 		if (this.reporter == null) {
-			this.reporter = new DefaultReporter();
+			this.reporter = createDefaultReporter();
 		}
+		if (this.hive == null) {
+			this.hive = createDefaultHive();
+		}
+		this.hive.open();
 		this.tasks.clear();
 		this.visited.clear();
 	}
@@ -129,6 +136,7 @@ public class Bee {
 		if (resource instanceof HtmlWebResource) {
 			found = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
 		}
+		storeResource(resource);
 		return found;
 	}
 	
@@ -153,6 +161,10 @@ public class Bee {
 	protected WebResource getResource(URI location) throws IOException, SAXException {
 		return this.downloader.download(location);
 	}
+
+	protected void storeResource(WebResource resource) {
+		this.hive.store(resource);
+	}
 	
 	protected boolean canVisit(URI location) {
 		for (WebSite site : this.sites) {
@@ -169,6 +181,14 @@ public class Bee {
 
 	protected boolean hasVisited(URI location) {
 		return this.visited.contains(location);
+	}
+	
+	protected Reporter createDefaultReporter() {
+		return new DefaultReporter();
+	}
+	
+	protected Hive createDefaultHive() {
+		return new DefaultHive();
 	}
 
 	private static class BeeStatistics implements Statistics {
