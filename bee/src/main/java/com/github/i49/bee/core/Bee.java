@@ -123,7 +123,7 @@ public class Bee {
 				this.stats.successes++;
 			} catch (Exception e) {
 				log.error(e.getMessage());
-				log.debug(e);
+				log.debug("Exception: ", e);
 				task.setStatus(Task.Status.FAILED);
 				this.stats.failures++;
 			}
