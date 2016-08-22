@@ -11,6 +11,7 @@ public enum MediaType {
 	APPLICATION_XHTML_XML("appliaction", "xhtml+xml"),
 	APPLICATION_XML("application", "xml"),
 	APPLICATION_JSON("application", "json"),
+	APPLICATION_RDF_XML("application", "rdf+xml"),
 	IMAGE_PNG("image", "png"),
 	IMAGE_JPEG("image", "jpeg"),
 	IMAGE_GIF("image", "gif");
@@ -27,6 +28,7 @@ public enum MediaType {
 		add(APPLICATION_XHTML_XML);
 		add(APPLICATION_XML);
 		add(APPLICATION_JSON);
+		add(APPLICATION_RDF_XML);
 		add(IMAGE_PNG);
 		add(IMAGE_JPEG);
 		add(IMAGE_GIF);
