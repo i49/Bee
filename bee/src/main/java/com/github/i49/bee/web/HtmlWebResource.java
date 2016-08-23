@@ -3,7 +3,6 @@ package com.github.i49.bee.web;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -11,18 +10,12 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
@@ -30,12 +23,11 @@ import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 public class HtmlWebResource extends AbstractWebResource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
-	private static final TransformerFactory transformFactory = TransformerFactory.newInstance();
 
 	private final Document document;
 
-	protected HtmlWebResource(URI initialLocation, URI finalLocation, Document document) {
-		super(initialLocation, finalLocation, MediaType.APPLICATION_XHTML_XML);
+	protected HtmlWebResource(URI location, Document document) {
+		super(location, MediaType.APPLICATION_XHTML_XML);
 		this.document = document;
 	}
 	
@@ -47,19 +39,20 @@ public class HtmlWebResource extends AbstractWebResource {
 	public byte[] getContent() {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		try {
-			transformTo(stream);
+			DocumentWriter writer = new DocumentWriter();
+			writer.writeTo(stream, document);
 			return stream.toByteArray();
-		} catch (TransformerException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
 		}
+		return null;
 	}
 
 	public Collection<URI> getLinkedPages() {
 		LinkedHashSet<URI> result = new LinkedHashSet<>();
 		for (URI link : getOutboundLinks()) {
 			URI page = withoutFragment(link);
-			if (page != null && !page.equals(getInitialLocation())) {
+			if (page != null && !page.equals(getLocation())) {
 				result.add(page);
 			}
 		}
@@ -116,7 +109,7 @@ public class HtmlWebResource extends AbstractWebResource {
 		try {
 			return getFinalLocation().resolve(value);
 		} catch (IllegalArgumentException e) {
-			log.debug("Failed to resolve " + value + " on " + getInitialLocation().toString());
+			log.debug("Failed to resolve " + value + " on " + getLocation().toString());
 			return null;
 		}
 	}
@@ -132,16 +125,11 @@ public class HtmlWebResource extends AbstractWebResource {
 		}
 	}
 	
-	private void transformTo(OutputStream stream) throws TransformerException {
-		Transformer transformer = transformFactory.newTransformer();
-		Source source = new DOMSource(getDocument());
-		StreamResult result = new StreamResult(stream);
-		transformer.transform(source, result);
-	}
-	
-	public static HtmlWebResource contentOf(URI initialLocation, URI finalLocation, InputStream stream) throws SAXException, IOException {
+	public static HtmlWebResource contentOf(URI location, InputStream stream, String encoding) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
-		Document document = builder.parse(stream);
-		return new HtmlWebResource(initialLocation, finalLocation, document);
+		InputSource source = new InputSource(stream);
+		source.setEncoding(encoding);
+		Document document = builder.parse(source);
+		return new HtmlWebResource(location, document);
 	}
 }

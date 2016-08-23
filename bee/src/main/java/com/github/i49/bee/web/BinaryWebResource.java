@@ -6,13 +6,13 @@ public class BinaryWebResource extends AbstractWebResource {
 
 	private final byte[] content;
 	
-	protected BinaryWebResource(URI initialLocation, URI finalLocation, MediaType mediaType, byte[] content) {
-		super(initialLocation, finalLocation, mediaType);
+	protected BinaryWebResource(URI location, MediaType mediaType, byte[] content) {
+		super(location, mediaType);
 		this.content = content;
 	}
 	
-	public static BinaryWebResource contentOf(URI initialLocation, URI finalLocation, MediaType mediaType, byte[] content) {
-		return new BinaryWebResource(initialLocation, finalLocation, mediaType, content);
+	public static BinaryWebResource contentOf(URI location, MediaType mediaType, byte[] content) {
+		return new BinaryWebResource(location, mediaType, content);
 	}
 
 	@Override

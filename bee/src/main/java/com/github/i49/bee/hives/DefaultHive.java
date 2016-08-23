@@ -44,7 +44,7 @@ public class DefaultHive implements Hive {
 
 	@Override
 	public void store(WebResource resource) throws IOException {
-		String path = this.layout.mapPath(resource.getInitialLocation());
+		String path = this.layout.mapPath(resource.getLocation());
 		this.storage.saveResourceAt(path, resource);
 	}
 

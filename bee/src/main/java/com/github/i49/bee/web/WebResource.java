@@ -4,9 +4,11 @@ import java.net.URI;
 
 public interface WebResource {
 
-	URI getInitialLocation();
+	URI getLocation();
 	
 	URI getFinalLocation();
+	
+	void setRedirectLocation(URI location);
 	
 	MediaType getMediaType();
 	

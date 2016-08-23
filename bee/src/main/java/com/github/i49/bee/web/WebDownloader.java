@@ -19,6 +19,8 @@ import org.apache.http.util.EntityUtils;
 public class WebDownloader implements AutoCloseable {
 
 	private static final Log log = LogFactory.getLog(WebDownloader.class);
+
+	private static final String DEFAULT_ENCODING = "UTF-8";
 	
 	private final CloseableHttpClient httpClient; 
 	
@@ -32,33 +34,37 @@ public class WebDownloader implements AutoCloseable {
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
 			final int code = response.getStatusLine().getStatusCode();
 			if (code == HttpStatus.SC_OK) {
-				URI finalLocation = getFinalLocation(location, context);
-				return createWebResource(location, finalLocation, response.getEntity());
+				WebResource resource = createWebResource(location, response.getEntity());
+				URI redirectLocation = getRedirectLocation(context);
+				if (redirectLocation != null) {
+					resource.setRedirectLocation(redirectLocation);
+				}
+				return resource;
 			} else {
 				throw new IOException("Failed to get " + location.toString() + " (" + code + ")");
 			}
 		}
 	}
 
-	private static URI getFinalLocation(URI initialLocation, HttpClientContext context) {
+	private static URI getRedirectLocation(HttpClientContext context) {
 		List<URI> locations = context.getRedirectLocations();
 		if (locations == null || locations.isEmpty()) {
-			return initialLocation;
+			return null;
 		} else {
 			return locations.get(locations.size() - 1);
 		}
 	}
 	
-	private WebResource createWebResource(URI initialLocation, URI finalLocation, HttpEntity entity) throws Exception {
+	private WebResource createWebResource(URI location, HttpEntity entity) throws Exception {
 		String contentType = entity.getContentType().getValue();
 		MediaType mediaType = parseMediaType(contentType);
 		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
 			try (InputStream stream = entity.getContent()) {
-				return HtmlWebResource.contentOf(initialLocation, finalLocation, stream);
+				return HtmlWebResource.contentOf(location, stream, DEFAULT_ENCODING);
 			}
 		} else {
 			byte[] content = EntityUtils.toByteArray(entity);
-			return BinaryWebResource.contentOf(initialLocation, finalLocation, mediaType, content);
+			return BinaryWebResource.contentOf(location, mediaType, content);
 		}
 	}
 	
