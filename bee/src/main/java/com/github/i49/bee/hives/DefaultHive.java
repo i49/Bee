@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
 public class DefaultHive implements Hive {
@@ -17,6 +18,7 @@ public class DefaultHive implements Hive {
 	
 	private Layout layout;
 	private Storage storage;
+	private ResourceSerializer serializer = new DefaultResourceSerializer();
 	
 	public DefaultHive() {
 	}
@@ -45,7 +47,12 @@ public class DefaultHive implements Hive {
 	@Override
 	public void store(WebResource resource) throws IOException {
 		String path = this.layout.mapPath(resource.getLocation());
-		this.storage.saveResourceAt(path, resource);
+		byte[] content = serializeResource(resource);
+		this.storage.saveAt(path, content);
+	}
+	
+	protected byte[] serializeResource(WebResource resource) {
+		return resource.getContent(this.serializer);
 	}
 
 	protected Layout createDefaultLayout() {

@@ -12,5 +12,5 @@ public interface WebResource {
 	
 	MediaType getMediaType();
 	
-	byte[] getContent();
+	byte[] getContent(ResourceSerializer serializer);
 }

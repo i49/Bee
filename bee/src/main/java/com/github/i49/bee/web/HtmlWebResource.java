@@ -1,6 +1,5 @@
 package com.github.i49.bee.web;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -36,16 +35,8 @@ public class HtmlWebResource extends AbstractWebResource {
 	}
 
 	@Override
-	public byte[] getContent() {
-		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		try {
-			DocumentWriter writer = new DocumentWriter();
-			writer.writeTo(stream, document);
-			return stream.toByteArray();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
+	public byte[] getContent(ResourceSerializer serializer) {
+		return serializer.writeHtmlDocument(getDocument());
 	}
 
 	public Collection<URI> getLinkedPages() {

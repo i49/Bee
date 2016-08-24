@@ -16,7 +16,7 @@ public class BinaryWebResource extends AbstractWebResource {
 	}
 
 	@Override
-	public byte[] getContent() {
+	public byte[] getContent(ResourceSerializer serializer) {
 		return content;
 	}
 }

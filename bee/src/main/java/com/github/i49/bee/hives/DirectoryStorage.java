@@ -10,8 +10,6 @@ import java.nio.file.Path;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.github.i49.bee.web.WebResource;
-
 public class DirectoryStorage implements Storage {
 	
 	private static final Log log = LogFactory.getLog(DirectoryStorage.class);
@@ -33,11 +31,10 @@ public class DirectoryStorage implements Storage {
 	}
 
 	@Override
-	public void saveResourceAt(String path, WebResource resource) throws IOException {
+	public void saveAt(String path, byte[] content) throws IOException {
 		Path fullpath = this.root.resolve(path.substring(1)).toAbsolutePath();
 		Files.createDirectories(fullpath.getParent());
 		try (OutputStream stream = Files.newOutputStream(fullpath)) {
-			byte[] content = resource.getContent();
 			if (content != null) {
 				stream.write(content);
 			}
