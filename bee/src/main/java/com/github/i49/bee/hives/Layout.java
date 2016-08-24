@@ -4,5 +4,5 @@ import java.net.URI;
 
 public interface Layout {
 
-	URI mapPath(URI location);
+	String mapPath(URI location);
 }

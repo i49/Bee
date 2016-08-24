@@ -2,6 +2,8 @@ package com.github.i49.bee.hives;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,29 +53,32 @@ public class DefaultHive implements Hive {
 
 	@Override
 	public void store(WebResource resource, List<URI> linkTargets) throws IOException {
-		URI newLocation = this.layout.mapPath(resource.getLocation());
+		String newLocation = this.layout.mapPath(resource.getLocation());
 		if (linkTargets != null && !linkTargets.isEmpty()) {
-//			rewriteResource((LinkSource)resource, newLocation, linkTargets);
+			rewriteResource((LinkSource)resource, newLocation, linkTargets);
 		}
 		byte[] content = serializeResource(resource);
-		this.storage.saveAt(newLocation.getPath(), content);
+		this.storage.saveAt(newLocation, content);
 	}
 	
 	protected byte[] serializeResource(WebResource resource) {
 		return resource.getContent(this.serializer);
 	}
 	
-	protected void rewriteResource(LinkSource resource, URI newLocation, List<URI> linkTargets) {
+	protected void rewriteResource(LinkSource resource, String newLocation, List<URI> linkTargets) {
 		Map<URI, URI> map = createRewriteMap(newLocation, linkTargets);
 		resource.rewriteLinks(map);
 	}
 	
-	protected Map<URI, URI> createRewriteMap(URI newLocation, List<URI> oldTargets) {
+	protected Map<URI, URI> createRewriteMap(String newLocation, List<URI> oldTargets) {
+		Path sourcePath = Paths.get(newLocation); 
 		Map<URI, URI> map = new HashMap<>();
 		for (URI oldTarget : oldTargets) {
-			URI newTarget = this.layout.mapPath(oldTarget);
-			URI relative = newLocation.relativize(newTarget);
-			map.put(oldTarget, relative);
+			String mappedTarget = this.layout.mapPath(oldTarget);
+			Path targetPath = Paths.get(mappedTarget);
+			Path relativePath = sourcePath.relativize(targetPath);
+			URI newTarget = URI.create(relativePath.toString().replaceAll("\\\\", "/"));
+			map.put(oldTarget, newTarget);
 		}
 		return map;
 	}
