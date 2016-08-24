@@ -1,10 +1,15 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.github.i49.bee.web.LinkSource;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
@@ -45,14 +50,32 @@ public class DefaultHive implements Hive {
 	}
 
 	@Override
-	public void store(WebResource resource) throws IOException {
-		String path = this.layout.mapPath(resource.getLocation());
+	public void store(WebResource resource, List<URI> linkTargets) throws IOException {
+		URI newLocation = this.layout.mapPath(resource.getLocation());
+		if (linkTargets != null && !linkTargets.isEmpty()) {
+//			rewriteResource((LinkSource)resource, newLocation, linkTargets);
+		}
 		byte[] content = serializeResource(resource);
-		this.storage.saveAt(path, content);
+		this.storage.saveAt(newLocation.getPath(), content);
 	}
 	
 	protected byte[] serializeResource(WebResource resource) {
 		return resource.getContent(this.serializer);
+	}
+	
+	protected void rewriteResource(LinkSource resource, URI newLocation, List<URI> linkTargets) {
+		Map<URI, URI> map = createRewriteMap(newLocation, linkTargets);
+		resource.rewriteLinks(map);
+	}
+	
+	protected Map<URI, URI> createRewriteMap(URI newLocation, List<URI> oldTargets) {
+		Map<URI, URI> map = new HashMap<>();
+		for (URI oldTarget : oldTargets) {
+			URI newTarget = this.layout.mapPath(oldTarget);
+			URI relative = newLocation.relativize(newTarget);
+			map.put(oldTarget, relative);
+		}
+		return map;
 	}
 
 	protected Layout createDefaultLayout() {

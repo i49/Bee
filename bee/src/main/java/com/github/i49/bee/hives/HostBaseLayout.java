@@ -9,7 +9,7 @@ public class HostBaseLayout implements Layout {
 	private String indexName = DEFAULT_INDEX_NAME;
 
 	@Override
-	public String mapPath(URI location) {
+	public URI mapPath(URI location) {
 		StringBuilder builder = new StringBuilder("/");
 		builder.append(location.getHost()).append("/");
 		final int port = location.getPort();
@@ -23,6 +23,6 @@ public class HostBaseLayout implements Layout {
 		if (path.endsWith("/")) {
 			builder.append(this.indexName);
 		}
-		return builder.toString();
+		return URI.create(builder.toString());
 	}
 }

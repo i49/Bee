@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -19,7 +20,7 @@ import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
-public class HtmlWebResource extends AbstractWebResource {
+public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
 
@@ -37,6 +38,13 @@ public class HtmlWebResource extends AbstractWebResource {
 	@Override
 	public byte[] getContent(ResourceSerializer serializer) {
 		return serializer.writeHtmlDocument(getDocument());
+	}
+
+	@Override
+	public void rewriteLinks(Map<URI, URI> map) {
+		rewriteLinks("link", "href", map);
+		rewriteLinks("img", "src", map);
+		rewriteLinks("a", "href", map);
 	}
 
 	public Collection<URI> getLinkedPages() {
@@ -103,6 +111,42 @@ public class HtmlWebResource extends AbstractWebResource {
 			log.debug("Failed to resolve " + value + " on " + getLocation().toString());
 			return null;
 		}
+	}
+	
+	protected void rewriteLinks(String element, String attribute, Map<URI, URI> map) {
+		for (Element e : findElementsByName(element)) {
+			String oldValue = e.getAttribute(attribute);
+			if (oldValue != null) {
+				String newValue = convertLink(oldValue, map);
+				if (newValue != null) {
+					e.setAttribute(attribute, newValue);
+				}
+			}
+		}
+	}
+		
+	protected String convertLink(String value, Map<URI, URI> map) {
+		String[] parts = value.split("#");
+		if (parts.length == 0) {
+			return null;
+		}
+		parts[0] = parts[0].trim();
+		if (parts[0].isEmpty()) {
+			return null;
+		}
+		URI oldTarget = resolve(parts[0]);
+		if (oldTarget == null || oldTarget.isOpaque()) {
+			return null;
+		}
+		URI newTarget = map.get(oldTarget);
+		if (newTarget == null) {
+			return null;
+		}
+		String newValue = newTarget.toString();
+		if (parts.length > 1) {
+			newValue = String.join("#", newValue, parts[1]);
+		}
+		return newValue;
 	}
 	
 	private static URI withoutFragment(URI location) {

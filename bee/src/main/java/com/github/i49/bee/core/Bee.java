@@ -139,14 +139,14 @@ public class Bee {
 	}
 	
 	protected List<URI> visit(URI location, int distance, int distanceLimit) throws Exception {
-		List<URI> found = null;
+		List<URI> linkTargets = null;
 		addToHistory(location);
 		WebResource resource = retrieveResource(location);
 		if (resource instanceof HtmlWebResource) {
-			found = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
+			linkTargets = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
 		}
-		storeResource(resource);
-		return found;
+		storeResource(resource, linkTargets);
+		return linkTargets;
 	}
 	
 	protected List<URI> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
@@ -171,8 +171,8 @@ public class Bee {
 		return this.downloader.download(location);
 	}
 
-	protected void storeResource(WebResource resource) throws IOException {
-		this.hive.store(resource);
+	protected void storeResource(WebResource resource, List<URI> linkTargets) throws IOException {
+		this.hive.store(resource, linkTargets);
 	}
 	
 	protected boolean canVisit(URI location) {
