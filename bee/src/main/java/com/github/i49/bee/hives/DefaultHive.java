@@ -8,10 +8,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.tools.DocumentationTool.Location;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.web.LinkSource;
+import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
@@ -71,14 +74,13 @@ public class DefaultHive implements Hive {
 	}
 	
 	protected Map<URI, URI> createRewriteMap(String newLocation, List<URI> oldTargets) {
-		Path sourcePath = Paths.get(newLocation); 
+		Locator baseLocation = Locator.pathOf(newLocation).getParent();
 		Map<URI, URI> map = new HashMap<>();
 		for (URI oldTarget : oldTargets) {
 			String mappedTarget = this.layout.mapPath(oldTarget);
-			Path targetPath = Paths.get(mappedTarget);
-			Path relativePath = sourcePath.relativize(targetPath);
-			URI newTarget = URI.create(relativePath.toString().replaceAll("\\\\", "/"));
-			map.put(oldTarget, newTarget);
+			Locator targetLocation = Locator.pathOf(mappedTarget);
+			Locator relativeLocation = baseLocation.relativize(targetLocation);
+			map.put(oldTarget, relativeLocation.toURI());
 		}
 		return map;
 	}
