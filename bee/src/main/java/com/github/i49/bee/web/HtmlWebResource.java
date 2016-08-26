@@ -41,30 +41,9 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 	@Override
 	public Collection<Link> getComponentLinks() {
 		LinkedHashSet<Link> links = new LinkedHashSet<>();
-		for (Element e : findElementsByName("link")) {
-			if ("stylesheet".equals(e.getAttribute("rel"))) {
-				final MediaType type = parseType(e.getAttribute("type"), MediaType.TEXT_CSS);
-				Locator location = parseLink(e.getAttribute("href"));
-				if (location != null) {
-					links.add(new Link(location, type));
-				}
-			}
-		}
-		for (Element e : findElementsByName("script")) {
-			final MediaType type = parseType(e.getAttribute("type"), MediaType.TEXT_JAVASCRIPT);
-			if (type == MediaType.TEXT_JAVASCRIPT || type == MediaType.APPLICATION_JAVASCRIPT) {
-				Locator location = parseLink(e.getAttribute("src"));
-				if (location != null) {
-					links.add(new Link(location, type));
-				}
-			}
-		}
-		for (Element e : findElementsByName("img")) {
-			Locator location = parseLink(e.getAttribute("src"));
-			if (location != null) {
-				links.add(new Link(location, null));
-			}
-		}
+		collectStylesheets(links);
+		collectScripts(links);
+		collectImages(links);
 		return links;
 	}
 
@@ -72,9 +51,9 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 	public Collection<Link> getExternalLinks() {
 		LinkedHashSet<Link> links = new LinkedHashSet<>();
 		for (Element e : findElementsByName("a")) {
-			Locator location = parseLink(e.getAttribute("href"));
-			if (location != null) {
-				links.add(new Link(location, null));
+			Link link = parseLink(e, "href", null);
+			if (link != null) {
+				links.add(link);
 			}
 		}
 		return links;
@@ -97,22 +76,57 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 		return result;
 	}
 
-	protected Locator parseLink(String value) {
+	protected void collectStylesheets(Collection<Link> links) {
+		for (Element e : findElementsByName("link")) {
+			if ("stylesheet".equals(e.getAttribute("rel"))) {
+				Link link = parseLink(e, "href", MediaType.TEXT_CSS);
+				if (link != null) {
+					links.add(link);
+				}
+			}
+		}
+	}
+	
+	protected void collectScripts(Collection<Link> links) {
+		for (Element e : findElementsByName("script")) {
+			Link link = parseLink(e, "src", MediaType.TEXT_JAVASCRIPT);
+			if (link != null) {
+				MediaType type = link.getMediaType();
+				if (type == MediaType.TEXT_JAVASCRIPT || type == MediaType.APPLICATION_JAVASCRIPT) {
+					links.add(link);	
+				}
+			}
+		}
+	}
+	
+	protected void collectImages(Collection<Link> links) {
+		for (Element e : findElementsByName("img")) {
+			Link link = parseLink(e, "src", null);
+			if (link != null) {
+				links.add(link);
+			}
+		}
+	}
+	
+	protected Link parseLink(Element e, String attributeName, MediaType defaultType) {
+		MediaType type = parseLinkType(e, defaultType);
+		String value = e.getAttribute(attributeName);
 		if (value == null) {
 			return null;
 		}
 		String[] parts = value.split("#");
 		if (parts.length >= 1) {
-			return resolve(parts[0]);
+			return Link.create(resolve(parts[0]), type);
 		} else {
 			return null;
 		}
 	}
 	
-	protected MediaType parseType(String value, MediaType defaultType) {
+	protected MediaType parseLinkType(Element e, MediaType defaultType) {
+		final String value = e.getAttribute("type");
 		return (value != null) ? MediaType.of(value) : defaultType;
 	}
-	
+
 	protected Locator resolve(String value) {
 		value = value.trim();
 		if (value.isEmpty() || value.equals("#")) {
