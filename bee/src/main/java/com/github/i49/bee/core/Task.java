@@ -1,6 +1,6 @@
 package com.github.i49.bee.core;
 
-import java.net.URI;
+import com.github.i49.bee.web.Locator;
 
 /**
  * Task to be done by bee.
@@ -14,21 +14,21 @@ public class Task {
 		DONE
 	};
 	
-	private final URI location;
+	private final Locator location;
 	private final int distance;
 	private Status status;
 	
-	public Task(URI location) {
+	public Task(Locator location) {
 		this(location, 0);
 	}
 	
-	public Task(URI location, int distance) {
+	public Task(Locator location, int distance) {
 		this.location = location;
 		this.distance = distance;
 		this.status = Status.WAITING;
 	}
 
-	public URI getLocation() {
+	public Locator getLocation() {
 		return location;
 	}
 

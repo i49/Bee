@@ -1,8 +1,9 @@
 package com.github.i49.bee.core;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.github.i49.bee.web.Locator;
 
 /**
  * Web site allowed to visit.
@@ -35,7 +36,7 @@ public class WebSite {
 		return excludes;
 	}
 
-	public boolean contains(URI location) {
+	public boolean contains(Locator location) {
 		if (!location.getHost().equals(this.host))
 			return false;
 		if (this.port != -1) {

@@ -1,18 +1,14 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.tools.DocumentationTool.Location;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceSerializer;
@@ -55,10 +51,10 @@ public class DefaultHive implements Hive {
 	}
 
 	@Override
-	public void store(WebResource resource, List<URI> linkTargets) throws IOException {
+	public void store(WebResource resource, List<Link> links) throws IOException {
 		String newLocation = this.layout.mapPath(resource.getLocation());
-		if (linkTargets != null && !linkTargets.isEmpty()) {
-			rewriteResource((LinkSource)resource, newLocation, linkTargets);
+		if (links != null && !links.isEmpty()) {
+			rewriteResource((LinkSource)resource, newLocation, links);
 		}
 		byte[] content = serializeResource(resource);
 		this.storage.saveAt(newLocation, content);
@@ -68,19 +64,20 @@ public class DefaultHive implements Hive {
 		return resource.getContent(this.serializer);
 	}
 	
-	protected void rewriteResource(LinkSource resource, String newLocation, List<URI> linkTargets) {
-		Map<URI, URI> map = createRewriteMap(newLocation, linkTargets);
+	protected void rewriteResource(LinkSource resource, String newLocation, List<Link> links) {
+		Map<Locator, Locator> map = createRewriteMap(newLocation, links);
 		resource.rewriteLinks(map);
 	}
 	
-	protected Map<URI, URI> createRewriteMap(String newLocation, List<URI> oldTargets) {
+	protected Map<Locator, Locator> createRewriteMap(String newLocation, List<Link> links) {
 		Locator baseLocation = Locator.pathOf(newLocation).getParent();
-		Map<URI, URI> map = new HashMap<>();
-		for (URI oldTarget : oldTargets) {
-			String mappedTarget = this.layout.mapPath(oldTarget);
+		Map<Locator, Locator> map = new HashMap<>();
+		for (Link link : links) {
+			final Locator oldTarget = link.getLocation();
+			final String mappedTarget = this.layout.mapPath(oldTarget);
 			Locator targetLocation = Locator.pathOf(mappedTarget);
 			Locator relativeLocation = baseLocation.relativize(targetLocation);
-			map.put(oldTarget, relativeLocation.toURI());
+			map.put(oldTarget, relativeLocation);
 		}
 		return map;
 	}

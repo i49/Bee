@@ -1,6 +1,6 @@
 package com.github.i49.bee.hives;
 
-import java.net.URI;
+import com.github.i49.bee.web.Locator;
 
 public class HostBaseLayout implements Layout {
 
@@ -9,7 +9,7 @@ public class HostBaseLayout implements Layout {
 	private String indexName = DEFAULT_INDEX_NAME;
 
 	@Override
-	public String mapPath(URI location) {
+	public String mapPath(Locator location) {
 		StringBuilder builder = new StringBuilder("/");
 		builder.append(location.getHost()).append("/");
 		final int port = location.getPort();

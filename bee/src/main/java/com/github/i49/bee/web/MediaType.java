@@ -7,9 +7,12 @@ public enum MediaType {
 	
 	TEXT_PLAIN("text", "plain"),
 	TEXT_HTML("text", "html"),
+	TEXT_CSS("text", "css"),
+	TEXT_JAVASCRIPT("text", "javascript"),
 	TEXT_TURTLE("text", "turtle"),
 	APPLICATION_XHTML_XML("appliaction", "xhtml+xml"),
 	APPLICATION_XML("application", "xml"),
+	APPLICATION_JAVASCRIPT("application", "javascript"),
 	APPLICATION_JSON("application", "json"),
 	APPLICATION_RDF_XML("application", "rdf+xml"),
 	IMAGE_PNG("image", "png"),
@@ -24,9 +27,12 @@ public enum MediaType {
 	static {
 		add(TEXT_PLAIN);
 		add(TEXT_HTML);
+		add(TEXT_CSS);
+		add(TEXT_JAVASCRIPT);
 		add(TEXT_TURTLE);
 		add(APPLICATION_XHTML_XML);
 		add(APPLICATION_XML);
+		add(APPLICATION_JAVASCRIPT);
 		add(APPLICATION_JSON);
 		add(APPLICATION_RDF_XML);
 		add(IMAGE_PNG);

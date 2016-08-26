@@ -1,8 +1,8 @@
 package com.github.i49.bee.hives;
 
-import java.net.URI;
+import com.github.i49.bee.web.Locator;
 
 public interface Layout {
 
-	String mapPath(URI location);
+	String mapPath(Locator location);
 }

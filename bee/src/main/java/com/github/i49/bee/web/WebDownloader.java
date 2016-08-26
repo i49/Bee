@@ -28,14 +28,14 @@ public class WebDownloader implements AutoCloseable {
 		this.httpClient = HttpClients.createDefault();
 	}
 	
-	public WebResource download(URI location) throws Exception {
-		HttpGet request = new HttpGet(location);
+	public WebResource download(Locator location) throws Exception {
+		HttpGet request = new HttpGet(location.toURI());
 		HttpClientContext context = new HttpClientContext();
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
 			final int code = response.getStatusLine().getStatusCode();
 			if (code == HttpStatus.SC_OK) {
 				WebResource resource = createWebResource(location, response.getEntity());
-				URI redirectLocation = getRedirectLocation(context);
+				Locator redirectLocation = getRedirectLocation(context);
 				if (redirectLocation != null) {
 					resource.setRedirectLocation(redirectLocation);
 				}
@@ -46,25 +46,25 @@ public class WebDownloader implements AutoCloseable {
 		}
 	}
 
-	private static URI getRedirectLocation(HttpClientContext context) {
+	private static Locator getRedirectLocation(HttpClientContext context) {
 		List<URI> locations = context.getRedirectLocations();
 		if (locations == null || locations.isEmpty()) {
 			return null;
 		} else {
-			return locations.get(locations.size() - 1);
+			return Locator.fromURI(locations.get(locations.size() - 1));
 		}
 	}
 	
-	private WebResource createWebResource(URI location, HttpEntity entity) throws Exception {
+	private WebResource createWebResource(Locator location, HttpEntity entity) throws Exception {
 		String contentType = entity.getContentType().getValue();
 		MediaType mediaType = parseMediaType(contentType);
 		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
 			try (InputStream stream = entity.getContent()) {
-				return HtmlWebResource.contentOf(location, stream, DEFAULT_ENCODING);
+				return HtmlWebResource.create(location, stream, DEFAULT_ENCODING);
 			}
 		} else {
 			byte[] content = EntityUtils.toByteArray(entity);
-			return BinaryWebResource.contentOf(location, mediaType, content);
+			return BinaryWebResource.create(location, mediaType, content);
 		}
 	}
 	

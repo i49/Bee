@@ -1,14 +1,12 @@
 package com.github.i49.bee.web;
 
-import java.net.URI;
-
 public interface WebResource {
 
-	URI getLocation();
+	Locator getLocation();
 	
-	URI getFinalLocation();
+	Locator getFinalLocation();
 	
-	void setRedirectLocation(URI location);
+	void setRedirectLocation(Locator location);
 	
 	MediaType getMediaType();
 	

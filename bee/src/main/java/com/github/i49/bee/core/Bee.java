@@ -1,8 +1,6 @@
 package com.github.i49.bee.core;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -15,6 +13,8 @@ import org.apache.commons.logging.LogFactory;
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.web.HtmlWebResource;
+import com.github.i49.bee.web.Link;
+import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
 
@@ -32,7 +32,7 @@ public class Bee {
 	private Hive hive; 
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
-	private final Set<URI> visited = new HashSet<URI>();
+	private final Set<Locator> visited = new HashSet<>();
 	
 	private BeeStatistics stats;
 	private Reporter reporter;
@@ -90,11 +90,8 @@ public class Bee {
 	}
 	
 	protected void makeTrip(Seed seed) {
-		URI location;
-		try {
-			location = new URI(seed.getLocation());
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
+		Locator location = Locator.parse(seed.getLocation());
+		if (location == null) {
 			return;
 		}
 		this.tasks.clear();
@@ -105,20 +102,20 @@ public class Bee {
 	protected void doAllTasks(int distanceLimit) {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
-			List<URI> found = doTask(task, distanceLimit);
-			if (found != null && found.size() > 0) {
-				addNewTasks(found, task.getDistance() + 1);
+			List<Link> links = doTask(task, distanceLimit);
+			if (links != null && links.size() > 0) {
+				addNewTasks(links, task.getDistance() + 1);
 			}
 		}
 	}
 	
-	protected List<URI> doTask(Task task, int distanceLimit) {
-		List<URI> found = null;
+	protected List<Link> doTask(Task task, int distanceLimit) {
+		List<Link> links = null;
 		if (hasVisited(task.getLocation())) {
 			task.setStatus(Task.Status.SKIPPED);
 		} else {
 			try {
-				found = visit(task.getLocation(), task.getDistance(), distanceLimit);
+				links = visit(task.getLocation(), task.getDistance(), distanceLimit);
 				task.setStatus(Task.Status.DONE);
 				this.stats.successes++;
 			} catch (Exception e) {
@@ -129,53 +126,52 @@ public class Bee {
 			}
 		}
 		this.reporter.reportTaskResult(task);
-		return found;
+		return links;
 	}
 	
-	protected void addNewTasks(List<URI> found, int distance) {
-		for (int i = 0; i < found.size(); ++i) {
-			this.tasks.add(i, new Task(found.get(i), distance));
+	protected void addNewTasks(List<Link> links, int distance) {
+		for (int i = 0; i < links.size(); ++i) {
+			this.tasks.add(i, new Task(links.get(i).getLocation(), distance));
 		}
 	}
 	
-	protected List<URI> visit(URI location, int distance, int distanceLimit) throws Exception {
-		List<URI> linkTargets = null;
+	protected List<Link> visit(Locator location, int distance, int distanceLimit) throws Exception {
+		List<Link> links = null;
 		addToHistory(location);
 		WebResource resource = retrieveResource(location);
 		if (resource instanceof HtmlWebResource) {
-			linkTargets = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
+			links = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
 		}
-		storeResource(resource, linkTargets);
-		return linkTargets;
+		storeResource(resource, links);
+		return links;
 	}
 	
-	protected List<URI> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
-		if (distance >= distanceLimit) {
-			return null;
-		}
-		List<URI> links = new ArrayList<>();
-		for (URI image: resource.getImageLinks()) {
-			if (canVisit(image)) {
-				links.add(image);
+	protected List<Link> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
+		List<Link> links = new ArrayList<>();
+		for (Link link: resource.getComponentLinks()) {
+			if (canVisit(link.getLocation())) {
+				links.add(link);
 			}
 		}
-		for (URI page : resource.getLinkedPages()) {
-			if (canVisit(page)) {
-				links.add(page);
+		if (distance < distanceLimit) {
+			for (Link link : resource.getExternalLinks()) {
+				if (canVisit(link.getLocation())) {
+					links.add(link);
+				}
 			}
 		}
 		return links;
 	}
 	
-	protected WebResource retrieveResource(URI location) throws Exception {
+	protected WebResource retrieveResource(Locator location) throws Exception {
 		return this.downloader.download(location);
 	}
 
-	protected void storeResource(WebResource resource, List<URI> linkTargets) throws IOException {
+	protected void storeResource(WebResource resource, List<Link> linkTargets) throws IOException {
 		this.hive.store(resource, linkTargets);
 	}
 	
-	protected boolean canVisit(URI location) {
+	protected boolean canVisit(Locator location) {
 		for (WebSite site : this.sites) {
 			if (site.contains(location)) {
 				return true;
@@ -184,11 +180,11 @@ public class Bee {
 		return false;
 	}
 
-	protected void addToHistory(URI location) {
+	protected void addToHistory(Locator location) {
 		this.visited.add(location);
 	}
 
-	protected boolean hasVisited(URI location) {
+	protected boolean hasVisited(Locator location) {
 		return this.visited.contains(location);
 	}
 	

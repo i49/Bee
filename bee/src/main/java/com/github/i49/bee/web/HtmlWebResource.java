@@ -2,8 +2,6 @@ package com.github.i49.bee.web;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -26,7 +24,7 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 
 	private final Document document;
 
-	protected HtmlWebResource(URI location, Document document) {
+	protected HtmlWebResource(Locator location, Document document) {
 		super(location, MediaType.APPLICATION_XHTML_XML);
 		this.document = document;
 	}
@@ -39,50 +37,58 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 	public byte[] getContent(ResourceSerializer serializer) {
 		return serializer.writeHtmlDocument(getDocument());
 	}
+	
+	@Override
+	public Collection<Link> getComponentLinks() {
+		LinkedHashSet<Link> links = new LinkedHashSet<>();
+		for (Element e : findElementsByName("link")) {
+			if ("stylesheet".equals(e.getAttribute("rel"))) {
+				final MediaType type = parseType(e.getAttribute("type"), MediaType.TEXT_CSS);
+				Locator location = parseLink(e.getAttribute("href"));
+				if (location != null) {
+					links.add(new Link(location, type));
+				}
+			}
+		}
+		for (Element e : findElementsByName("script")) {
+			final MediaType type = parseType(e.getAttribute("type"), MediaType.TEXT_JAVASCRIPT);
+			if (type == MediaType.TEXT_JAVASCRIPT || type == MediaType.APPLICATION_JAVASCRIPT) {
+				Locator location = parseLink(e.getAttribute("src"));
+				if (location != null) {
+					links.add(new Link(location, type));
+				}
+			}
+		}
+		for (Element e : findElementsByName("img")) {
+			Locator location = parseLink(e.getAttribute("src"));
+			if (location != null) {
+				links.add(new Link(location, null));
+			}
+		}
+		return links;
+	}
 
 	@Override
-	public void rewriteLinks(Map<URI, URI> map) {
+	public Collection<Link> getExternalLinks() {
+		LinkedHashSet<Link> links = new LinkedHashSet<>();
+		for (Element e : findElementsByName("a")) {
+			Locator location = parseLink(e.getAttribute("href"));
+			if (location != null) {
+				links.add(new Link(location, null));
+			}
+		}
+		return links;
+	}
+
+	@Override
+	public void rewriteLinks(Map<Locator, Locator> map) {
 		rewriteLinks("link", "href", map);
+		rewriteLinks("script", "src", map);
 		rewriteLinks("img", "src", map);
 		rewriteLinks("a", "href", map);
 	}
 
-	public Collection<URI> getLinkedPages() {
-		LinkedHashSet<URI> result = new LinkedHashSet<>();
-		for (URI link : getOutboundLinks()) {
-			URI page = withoutFragment(link);
-			if (page != null && !page.equals(getLocation())) {
-				result.add(page);
-			}
-		}
-		return result;
-	}
-	
-	public Collection<URI> getOutboundLinks() {
-		List<URI> result = new ArrayList<>();
-		for (Element e : findElementsByName("a")) {
-			String value = e.getAttribute("href");
-			URI link = resolve(correctLink(value));
-			if (link != null && !link.isOpaque()) {
-				result.add(link);
-			}
-		}
-		return result;
-	}
-	
-	public Collection<URI> getImageLinks() {
-		LinkedHashSet<URI> result = new LinkedHashSet<>();
-		for (Element e : findElementsByName("img")) {
-			String value = e.getAttribute("src");
-			URI link = resolve(value);
-			if (link != null && !link.isOpaque()) {
-				result.add(link);
-			}
-		}
-		return result;
-	}
-	
-	private Iterable<Element> findElementsByName(String name) {
+	protected Iterable<Element> findElementsByName(String name) {
 		List<Element> result = new ArrayList<>();
 		NodeList nodes = this.document.getElementsByTagName(name);
 		for (int i = 0; i < nodes.getLength(); i++) {
@@ -90,30 +96,32 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 		}
 		return result;
 	}
-	
-	private static String correctLink(String value) {
-		String[] parts = value.split("#");
-		if (parts.length < 2) {
-			return value;
-		}
-		String fragment = parts[1].replaceAll(" ", "%20");
-		return String.join("#", parts[0], fragment);
-	}
 
-	private URI resolve(String value) {
-		value = value.trim();
-		if (value.isEmpty() || value.equals("#")) {
-			return getFinalLocation();
+	protected Locator parseLink(String value) {
+		if (value == null) {
+			return null;
 		}
-		try {
-			return getFinalLocation().resolve(value);
-		} catch (IllegalArgumentException e) {
-			log.debug("Failed to resolve " + value + " on " + getLocation().toString());
+		String[] parts = value.split("#");
+		if (parts.length >= 1) {
+			return resolve(parts[0]);
+		} else {
 			return null;
 		}
 	}
 	
-	protected void rewriteLinks(String element, String attribute, Map<URI, URI> map) {
+	protected MediaType parseType(String value, MediaType defaultType) {
+		return (value != null) ? MediaType.of(value) : defaultType;
+	}
+	
+	protected Locator resolve(String value) {
+		value = value.trim();
+		if (value.isEmpty() || value.equals("#")) {
+			return getFinalLocation();
+		}
+		return getFinalLocation().resolve(value);
+	}
+
+	protected void rewriteLinks(String element, String attribute, Map<Locator, Locator> map) {
 		for (Element e : findElementsByName(element)) {
 			String oldValue = e.getAttribute(attribute);
 			if (oldValue != null) {
@@ -125,7 +133,7 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 		}
 	}
 		
-	protected String convertLink(String value, Map<URI, URI> map) {
+	protected String convertLink(String value, Map<Locator, Locator> map) {
 		String[] parts = value.split("#");
 		if (parts.length == 0) {
 			return null;
@@ -134,11 +142,11 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 		if (parts[0].isEmpty()) {
 			return null;
 		}
-		URI oldTarget = resolve(parts[0]);
-		if (oldTarget == null || oldTarget.isOpaque()) {
+		Locator oldTarget = resolve(parts[0]);
+		if (oldTarget == null) {
 			return null;
 		}
-		URI newTarget = map.get(oldTarget);
+		Locator newTarget = map.get(oldTarget);
 		if (newTarget == null) {
 			return null;
 		}
@@ -149,18 +157,7 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 		return newValue;
 	}
 	
-	private static URI withoutFragment(URI location) {
-		if (location.getFragment() == null) {
-			return location;
-		}
-		try {
-			return new URI(location.getScheme(), location.getSchemeSpecificPart(), null);
-		} catch (URISyntaxException e) {
-			return null;
-		}
-	}
-	
-	public static HtmlWebResource contentOf(URI location, InputStream stream, String encoding) throws SAXException, IOException {
+	public static HtmlWebResource create(Locator location, InputStream stream, String encoding) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		InputSource source = new InputSource(stream);
 		source.setEncoding(encoding);

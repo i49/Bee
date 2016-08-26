@@ -5,8 +5,13 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 public class Locator {
 
+	private static final Log log = LogFactory.getLog(Locator.class);
+	
 	private final URI uri;
 	
 	protected Locator(URI uri) {
@@ -21,6 +26,14 @@ public class Locator {
 		return uri.getAuthority();
 	}
 	
+	public String getHost() {
+		return uri.getHost();
+	}
+	
+	public int getPort() {
+		return uri.getPort();
+	}
+	
 	public String getPath() {
 		return uri.getPath();
 	}
@@ -33,6 +46,10 @@ public class Locator {
 		return uri.getFragment();
 	}
 	
+	public Locator resolve(String value) {
+		return Locator.fromURI(uri.resolve(value));
+	}
+
 	public Locator getParent() {
 		String path = uri.getPath();
 		if (path.endsWith("/")) {
@@ -61,7 +78,7 @@ public class Locator {
 		Path relativePath = basePath.relativize(targetPath);
 		return pathOf(relativePath.toString().replaceAll("\\\\", "/"));
 	}
-
+	
 	public URI toURI() {
 		return uri;
 	}
@@ -93,13 +110,24 @@ public class Locator {
 		return true;
 	}
 
-	public static Locator of(URI uri) {
+	public static Locator parse(String value) {
+		try {
+			return Locator.fromURI(new URI(value));
+		} catch (URISyntaxException e) {
+			return null;
+		}
+	}
+	
+	public static Locator fromURI(URI uri) {
+		if (uri == null || uri.isOpaque()) {
+			return null;
+		}
 		return new Locator(uri);
 	}
 	
 	public static Locator pathOf(String path) {
 		try {
-			return of(new URI(path));
+			return fromURI(new URI(path));
 		} catch (URISyntaxException e) {
 			return null;
 		}
@@ -107,7 +135,7 @@ public class Locator {
 	
 	public static Locator of(String scheme, String authority, String path, String query, String fragment) {
 		try {
-			return new Locator(new URI(scheme, authority, path, query, fragment));
+			return fromURI(new URI(scheme, authority, path, query, fragment));
 		} catch (URISyntaxException e) {
 			return null;
 		}

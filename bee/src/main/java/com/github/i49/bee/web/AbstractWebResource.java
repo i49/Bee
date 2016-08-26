@@ -1,25 +1,23 @@
 package com.github.i49.bee.web;
 
-import java.net.URI;
-
 public abstract class AbstractWebResource implements WebResource {
 	
-	private final URI location;
-	private URI redirectLocation;
+	private final Locator location;
+	private Locator redirectLocation;
 	private final MediaType mediaType;
 
-	protected AbstractWebResource(URI location, MediaType mediaType) {
+	protected AbstractWebResource(Locator location, MediaType mediaType) {
 		this.location = location;
 		this.mediaType = mediaType;
 	}
 	
 	@Override
-	public URI getLocation() {
+	public Locator getLocation() {
 		return location;
 	}
 
 	@Override
-	public URI getFinalLocation() {
+	public Locator getFinalLocation() {
 		if (this.redirectLocation != null) {
 			return this.redirectLocation;
 		} else {
@@ -28,7 +26,7 @@ public abstract class AbstractWebResource implements WebResource {
 	}
 
 	@Override
-	public void setRedirectLocation(URI location) {
+	public void setRedirectLocation(Locator location) {
 		this.redirectLocation = location;
 	}
 	
