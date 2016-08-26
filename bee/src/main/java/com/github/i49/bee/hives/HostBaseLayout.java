@@ -2,14 +2,16 @@ package com.github.i49.bee.hives;
 
 import com.github.i49.bee.web.Locator;
 
-public class HostBaseLayout implements Layout {
-
-	private static final String DEFAULT_INDEX_NAME = "index.html";
-	
-	private String indexName = DEFAULT_INDEX_NAME;
+public class HostBaseLayout extends AbstractLayout {
 
 	@Override
-	public String mapPath(Locator location) {
+	protected String doMapPath(Locator location) {
+		StringBuilder builder = new StringBuilder(createPrefix(location));
+		builder.append(location.getPath());
+		return builder.toString();
+	}
+	
+	protected String createPrefix(Locator location) {
 		StringBuilder builder = new StringBuilder("/");
 		builder.append(location.getHost()).append("/");
 		final int port = location.getPort();
@@ -17,11 +19,6 @@ public class HostBaseLayout implements Layout {
 			builder.append(port);
 		} else {
 			builder.append("-");
-		}
-		final String path = location.getPath();
-		builder.append(path);
-		if (path.endsWith("/")) {
-			builder.append(this.indexName);
 		}
 		return builder.toString();
 	}

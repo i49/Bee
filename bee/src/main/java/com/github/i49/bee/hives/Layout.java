@@ -5,4 +5,6 @@ import com.github.i49.bee.web.Locator;
 public interface Layout {
 
 	String mapPath(Locator location);
+	
+	void setIndexName(String name);
 }
