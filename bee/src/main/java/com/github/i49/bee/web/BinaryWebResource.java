@@ -1,6 +1,6 @@
 package com.github.i49.bee.web;
 
-public class BinaryWebResource extends AbstractWebResource {
+public class BinaryWebResource extends WebResource {
 
 	private final byte[] content;
 	

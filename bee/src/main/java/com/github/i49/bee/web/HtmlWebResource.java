@@ -18,7 +18,7 @@ import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
-public class HtmlWebResource extends AbstractWebResource implements LinkSource {
+public class HtmlWebResource extends WebResource implements LinkSource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
 
