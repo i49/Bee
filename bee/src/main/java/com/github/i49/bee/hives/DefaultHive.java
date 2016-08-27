@@ -1,6 +1,7 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
+import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,12 +53,13 @@ public class DefaultHive implements Hive {
 
 	@Override
 	public void store(WebResource resource, List<Link> links) throws IOException {
-		String newLocation = this.layout.mapPath(resource.getLocation());
+		String newLocation = this.layout.mapPath(resource.getMetadata().getLocation());
 		if (links != null && !links.isEmpty()) {
 			rewriteResource((LinkSource)resource, newLocation, links);
 		}
 		byte[] content = serializeResource(resource);
-		this.storage.saveAt(newLocation, content);
+		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
+		this.storage.saveAt(newLocation, content, lastModified);
 	}
 	
 	protected byte[] serializeResource(WebResource resource) {

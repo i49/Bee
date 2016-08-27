@@ -24,8 +24,8 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 
 	private final Document document;
 
-	protected HtmlWebResource(Locator location, Document document) {
-		super(location, MediaType.APPLICATION_XHTML_XML);
+	protected HtmlWebResource(ResourceMetadata metadata, Document document) {
+		super(metadata);
 		this.document = document;
 	}
 	
@@ -130,9 +130,9 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 	protected Locator resolve(String value) {
 		value = value.trim();
 		if (value.isEmpty() || value.equals("#")) {
-			return getFinalLocation();
+			return getMetadata().getFinalLocation();
 		}
-		return getFinalLocation().resolve(value);
+		return getMetadata().getFinalLocation().resolve(value);
 	}
 
 	protected void rewriteLinks(String element, String attribute, Map<Locator, Locator> map) {
@@ -171,11 +171,11 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSource {
 		return newValue;
 	}
 	
-	public static HtmlWebResource create(Locator location, InputStream stream, String encoding) throws SAXException, IOException {
+	public static HtmlWebResource create(ResourceMetadata metadata, InputStream stream, String encoding) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		InputSource source = new InputSource(stream);
 		source.setEncoding(encoding);
 		Document document = builder.parse(source);
-		return new HtmlWebResource(location, document);
+		return new HtmlWebResource(metadata, document);
 	}
 }

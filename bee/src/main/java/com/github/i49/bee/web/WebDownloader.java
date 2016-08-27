@@ -8,10 +8,12 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.client.utils.DateUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -34,16 +36,25 @@ public class WebDownloader implements AutoCloseable {
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
 			final int code = response.getStatusLine().getStatusCode();
 			if (code == HttpStatus.SC_OK) {
-				WebResource resource = createWebResource(location, response.getEntity());
-				Locator redirectLocation = getRedirectLocation(context);
-				if (redirectLocation != null) {
-					resource.setRedirectLocation(redirectLocation);
-				}
-				return resource;
+				ResourceMetadata metadata = createMetadata(location, context, response);
+				return createWebResource(metadata, response.getEntity());
 			} else {
 				throw new IOException("Failed to get " + location.toString() + " (" + code + ")");
 			}
 		}
+	}
+	
+	private ResourceMetadata createMetadata(Locator location, HttpClientContext context, HttpResponse response) throws UnsupportedMediaException {
+		final HttpEntity entity = response.getEntity();
+		ResourceMetadata.Builder builder = ResourceMetadata.builder();
+		builder.setLocation(location);
+		builder.setMediaType(parseMediaType(entity));
+		builder.setRedirectLocation(getRedirectLocation(context));
+		String lastModified = response.getLastHeader("Last-Modified").getValue();
+		if (lastModified != null) {
+			builder.setLastModified(DateUtils.parseDate(lastModified));
+		}
+		return builder.build();
 	}
 
 	private static Locator getRedirectLocation(HttpClientContext context) {
@@ -55,20 +66,20 @@ public class WebDownloader implements AutoCloseable {
 		}
 	}
 	
-	private WebResource createWebResource(Locator location, HttpEntity entity) throws Exception {
-		String contentType = entity.getContentType().getValue();
-		MediaType mediaType = parseMediaType(contentType);
+	private WebResource createWebResource(ResourceMetadata metadata, HttpEntity entity) throws Exception {
+		final MediaType mediaType = metadata.getMediaType();
 		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
 			try (InputStream stream = entity.getContent()) {
-				return HtmlWebResource.create(location, stream, DEFAULT_ENCODING);
+				return HtmlWebResource.create(metadata, stream, DEFAULT_ENCODING);
 			}
 		} else {
 			byte[] content = EntityUtils.toByteArray(entity);
-			return BinaryWebResource.create(location, mediaType, content);
+			return BinaryWebResource.create(metadata, content);
 		}
 	}
 	
-	private static MediaType parseMediaType(String contentType) throws UnsupportedMediaException {
+	private static MediaType parseMediaType(HttpEntity entity) throws UnsupportedMediaException {
+		final String contentType = entity.getContentType().getValue();
 		String[] tokens = contentType.split(";");
 		MediaType mediaType = MediaType.of(tokens[0]);
 		if (mediaType == null) {
