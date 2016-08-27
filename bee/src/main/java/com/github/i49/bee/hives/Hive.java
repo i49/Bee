@@ -3,7 +3,7 @@ package com.github.i49.bee.hives;
 import java.io.IOException;
 import java.util.List;
 
-import com.github.i49.bee.web.Link;
+import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebResource;
 
 public interface Hive {
@@ -14,5 +14,5 @@ public interface Hive {
 	
 	void close() throws IOException;
 
-	void store(WebResource resource, List<Link> links) throws IOException;
+	void store(WebResource resource, List<ResourceMetadata> links) throws IOException;
 }

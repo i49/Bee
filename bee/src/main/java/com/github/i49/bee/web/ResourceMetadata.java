@@ -24,6 +24,10 @@ public class ResourceMetadata {
 		return redirectLocation;
 	}
 
+	public boolean isRedirected() {
+		return (redirectLocation != null);
+	}
+	
 	public Locator getFinalLocation() {
 		if (redirectLocation != null) {
 			return redirectLocation;

@@ -2,10 +2,10 @@ package com.github.i49.bee.core;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -15,6 +15,7 @@ import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.web.HtmlWebResource;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
 
@@ -32,7 +33,7 @@ public class Bee {
 	private Hive hive; 
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
-	private final Set<Locator> visited = new HashSet<>();
+	private final Map<Locator, ResourceMetadata> visited = new HashMap<>();
 	
 	private BeeStatistics stats;
 	private Reporter reporter;
@@ -102,20 +103,21 @@ public class Bee {
 	protected void doAllTasks(int distanceLimit) {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
-			List<Link> links = doTask(task, distanceLimit);
+			List<ResourceMetadata> links = doTask(task, distanceLimit);
 			if (links != null && links.size() > 0) {
 				addNewTasks(links, task.getDistance() + 1);
 			}
 		}
 	}
 	
-	protected List<Link> doTask(Task task, int distanceLimit) {
-		List<Link> links = null;
+	protected List<ResourceMetadata> doTask(Task task, int distanceLimit) {
+		final boolean visitNew = (task.getDistance() < distanceLimit);
+		List<ResourceMetadata> links = null;
 		if (hasVisited(task.getLocation())) {
 			task.setStatus(Task.Status.SKIPPED);
 		} else {
 			try {
-				links = visit(task.getLocation(), task.getDistance(), distanceLimit);
+				links = visit(task.getLocation(), visitNew);
 				task.setStatus(Task.Status.DONE);
 				this.stats.successes++;
 			} catch (Exception e) {
@@ -129,46 +131,100 @@ public class Bee {
 		return links;
 	}
 	
-	protected void addNewTasks(List<Link> links, int distance) {
+	protected void addNewTasks(List<ResourceMetadata> links, int distance) {
 		for (int i = 0; i < links.size(); ++i) {
-			this.tasks.add(i, new Task(links.get(i).getLocation(), distance));
+			this.tasks.add(i, new Task(links.get(i).getFinalLocation(), distance));
 		}
 	}
 	
-	protected List<Link> visit(Locator location, int distance, int distanceLimit) throws Exception {
-		List<Link> links = null;
-		addToHistory(location);
+	protected List<ResourceMetadata> visit(Locator location, boolean visitNew) throws Exception {
+		List<ResourceMetadata> links = null;
 		WebResource resource = retrieveResource(location);
+		addToHistory(resource);
 		if (resource instanceof HtmlWebResource) {
-			links = parseHtmlResource((HtmlWebResource)resource, distance, distanceLimit);
+			links = parseHtmlResource((HtmlWebResource)resource, visitNew);
+		} else {
+			storeResource(resource);
 		}
-		storeResource(resource, links);
 		return links;
 	}
 	
-	protected List<Link> parseHtmlResource(HtmlWebResource resource, int distance, int distanceLimit) {
-		List<Link> links = new ArrayList<>();
+	protected List<ResourceMetadata> parseHtmlResource(HtmlWebResource resource, boolean visitNew) throws IOException {
+		List<ResourceMetadata> internal = visitInternalResources(resource);
+		List<ResourceMetadata> external = visitExternalResources(resource, visitNew);
+		storeResource(resource, internal, external);
+		return external;
+	}
+
+	protected List<ResourceMetadata> visitInternalResources(HtmlWebResource resource) {
+		List<ResourceMetadata> result = new ArrayList<>();
 		for (Link link: resource.getComponentLinks()) {
-			if (canVisit(link.getLocation())) {
-				links.add(link);
+			ResourceMetadata meta = visitInternalResource(link.getLocation());
+			if (meta != null) {
+				result.add(meta);
 			}
 		}
-		if (distance < distanceLimit) {
-			for (Link link : resource.getExternalLinks()) {
-				if (canVisit(link.getLocation())) {
-					links.add(link);
+		return result;
+	}
+	
+	protected ResourceMetadata visitInternalResource(Locator location) {
+		ResourceMetadata meta = null;
+		if (canVisit(location)) {
+			if (hasVisited(location)) {
+				meta = getVisited(location);
+			} else {
+				try {
+					WebResource resource = retrieveResource(location);
+					storeResource(resource);
+					meta = addToHistory(resource);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 			}
 		}
-		return links;
+		return meta;
 	}
 	
+	protected List<ResourceMetadata> visitExternalResources(HtmlWebResource resource, boolean visitNew) {
+		List<ResourceMetadata> result = new ArrayList<>();
+		for (Link link: resource.getExternalLinks()) {
+			ResourceMetadata meta = visitExternalResource(link.getLocation(), visitNew);
+			if (meta != null) {
+				result.add(meta);
+			}
+		}
+		return result;
+	}
+	
+	protected ResourceMetadata visitExternalResource(Locator location, boolean visitNew) {
+		ResourceMetadata meta = null;
+		if (canVisit(location)) {
+			if (hasVisited(location)) {
+				meta = getVisited(location);
+			} else if (visitNew) {
+				try {
+					WebResource resource = retrieveResource(location);
+					meta = resource.getMetadata();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return meta;
+	}
+
 	protected WebResource retrieveResource(Locator location) throws Exception {
 		return this.downloader.download(location);
 	}
 
-	protected void storeResource(WebResource resource, List<Link> linkTargets) throws IOException {
-		this.hive.store(resource, linkTargets);
+	protected void storeResource(WebResource resource) throws IOException {
+		this.hive.store(resource, null);
+	}
+	
+	protected void storeResource(WebResource resource, List<ResourceMetadata> internal, List<ResourceMetadata> external) throws IOException {
+		List<ResourceMetadata> all = new ArrayList<>(internal);
+		all.addAll(external);
+		this.hive.store(resource, all);
 	}
 	
 	protected boolean canVisit(Locator location) {
@@ -180,12 +236,21 @@ public class Bee {
 		return false;
 	}
 
-	protected void addToHistory(Locator location) {
-		this.visited.add(location);
+	protected boolean hasVisited(Locator location) {
+		return (getVisited(location) != null);
+	}
+	
+	protected ResourceMetadata getVisited(Locator location) {
+		return this.visited.get(location);
 	}
 
-	protected boolean hasVisited(Locator location) {
-		return this.visited.contains(location);
+	protected ResourceMetadata addToHistory(WebResource resource) {
+		ResourceMetadata meta = resource.getMetadata();
+		this.visited.put(meta.getLocation(), meta);
+		if (meta.isRedirected()) {
+			this.visited.put(meta.getRedirectLocation(), meta);
+		}
+		return meta;
 	}
 	
 	protected Reporter createDefaultReporter() {

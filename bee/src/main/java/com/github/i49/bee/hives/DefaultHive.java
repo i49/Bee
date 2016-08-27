@@ -9,9 +9,9 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSource;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
@@ -52,8 +52,8 @@ public class DefaultHive implements Hive {
 	}
 
 	@Override
-	public void store(WebResource resource, List<Link> links) throws IOException {
-		String newLocation = this.layout.mapPath(resource.getMetadata().getLocation());
+	public void store(WebResource resource, List<ResourceMetadata> links) throws IOException {
+		String newLocation = this.layout.mapPath(resource.getMetadata().getFinalLocation());
 		if (links != null && !links.isEmpty()) {
 			rewriteResource((LinkSource)resource, newLocation, links);
 		}
@@ -66,16 +66,16 @@ public class DefaultHive implements Hive {
 		return resource.getContent(this.serializer);
 	}
 	
-	protected void rewriteResource(LinkSource resource, String newLocation, List<Link> links) {
+	protected void rewriteResource(LinkSource resource, String newLocation, List<ResourceMetadata> links) {
 		Map<Locator, Locator> map = createRewriteMap(newLocation, links);
 		resource.rewriteLinks(map);
 	}
 	
-	protected Map<Locator, Locator> createRewriteMap(String newLocation, List<Link> links) {
+	protected Map<Locator, Locator> createRewriteMap(String newLocation, List<ResourceMetadata> links) {
 		Locator baseLocation = Locator.pathOf(newLocation).getParent();
 		Map<Locator, Locator> map = new HashMap<>();
-		for (Link link : links) {
-			final Locator oldTarget = link.getLocation();
+		for (ResourceMetadata link : links) {
+			final Locator oldTarget = link.getFinalLocation();
 			final String mappedTarget = this.layout.mapPath(oldTarget);
 			Locator targetLocation = Locator.pathOf(mappedTarget);
 			Locator relativeLocation = baseLocation.relativize(targetLocation);
