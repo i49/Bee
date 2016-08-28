@@ -7,16 +7,8 @@ import com.github.i49.bee.web.Locator;
  */
 public class Task {
 
-	public enum Status {
-		WAITING,
-		SKIPPED,
-		FAILED,
-		DONE
-	};
-	
 	private final Locator location;
 	private final int distance;
-	private Status status;
 	
 	public Task(Locator location) {
 		this(location, 0);
@@ -25,7 +17,6 @@ public class Task {
 	public Task(Locator location, int distance) {
 		this.location = location;
 		this.distance = distance;
-		this.status = Status.WAITING;
 	}
 
 	public Locator getLocation() {
@@ -38,13 +29,5 @@ public class Task {
 	 */
 	public int getDistance() {
 		return distance;
-	}
-	
-	public Status getStatus() {
-		return status;
-	}
-	
-	public void setStatus(Status status) {
-		this.status = status;
 	}
 }

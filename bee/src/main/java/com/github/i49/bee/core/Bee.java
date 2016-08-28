@@ -64,15 +64,15 @@ public class Bee {
 	public void launch() {
 		log.debug("Bee launched.");
 		try {
-			prepareTrips();
+			prepareBeforeAllTrips();
 			makeAllTrips(this.seeds);
-			finishTrips();
+			unprepareAfterAllTrips();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	protected void prepareTrips() throws IOException {
+	protected void prepareBeforeAllTrips() throws IOException {
 		if (this.hive == null) {
 			this.hive = createDefaultHive();
 		}
@@ -81,7 +81,7 @@ public class Bee {
 		this.visited.clear();
 	}
 	
-	protected void finishTrips() throws IOException {
+	protected void unprepareAfterAllTrips() throws IOException {
 		this.hive.close();
 	}
 	
@@ -98,12 +98,12 @@ public class Bee {
 	}
 	
 	protected void makeTrip(Seed seed) {
-		prepareTrip(seed);
+		prepareBeforeTrip(seed);
 		doAllTasks();
-		unprepareTrip();
+		unprepareAfterTrip();
 	}
 	
-	protected void prepareTrip(Seed seed) {
+	protected void prepareBeforeTrip(Seed seed) {
 		this.done.clear();
 		this.currentSeed = seed;
 		this.currentDistance = 0;
@@ -114,7 +114,7 @@ public class Bee {
 		}
 	}
 	
-	protected void unprepareTrip() {
+	protected void unprepareAfterTrip() {
 	}
 	
 	protected void doAllTasks() {
@@ -131,17 +131,8 @@ public class Bee {
 		this.currentDistance = task.getDistance();
 		final boolean visitNew = (currentDistance < currentSeed.getDistanceLimit());
 		List<ResourceMetadata> links = null;
-		if (hasVisited(task.getLocation())) {
-			task.setStatus(Task.Status.SKIPPED);
-		} else {
-			try {
-				links = visit(task.getLocation(), visitNew);
-				task.setStatus(Task.Status.DONE);
-			} catch (Exception e) {
-				log.error(e.getMessage());
-				log.debug("Exception: ", e);
-				task.setStatus(Task.Status.FAILED);
-			}
+		if (!hasVisited(task.getLocation())) {
+			links = visit(task.getLocation(), visitNew);
 		}
 		return links;
 	}
@@ -152,9 +143,12 @@ public class Bee {
 		}
 	}
 	
-	protected List<ResourceMetadata> visit(Locator location, boolean visitNew) throws Exception {
+	protected List<ResourceMetadata> visit(Locator location, boolean visitNew) {
 		List<ResourceMetadata> links = null;
-		WebResource resource = retrieveResource(location);
+		WebResource resource = retrieveResource(location, false);
+		if (resource == null) {
+			return null;
+		}
 		addToHistory(resource);
 		if (resource instanceof HtmlWebResource) {
 			links = parseHtmlResource((HtmlWebResource)resource, visitNew);
@@ -164,7 +158,7 @@ public class Bee {
 		return links;
 	}
 	
-	protected List<ResourceMetadata> parseHtmlResource(HtmlWebResource resource, boolean visitNew) throws IOException {
+	protected List<ResourceMetadata> parseHtmlResource(HtmlWebResource resource, boolean visitNew) {
 		List<ResourceMetadata> internal = visitInternalResources(resource);
 		List<ResourceMetadata> external = visitExternalResources(resource, visitNew);
 		List<ResourceMetadata> all = new ArrayList<>(internal);
@@ -190,12 +184,10 @@ public class Bee {
 			if (hasDone(location)) {
 				meta = getVisited(location);
 			} else {
-				try {
-					WebResource resource = retrieveResource(location);
+				WebResource resource = retrieveResource(location, true);
+				if (resource != null) {
 					storeResource(resource, null, true);
 					meta = addToHistory(resource);
-				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		}
@@ -219,36 +211,43 @@ public class Bee {
 			if (hasVisited(location)) {
 				meta = getVisited(location);
 			} else if (visitNew) {
-				try {
-					WebResource resource = retrieveResource(location);
+				WebResource resource = retrieveResource(location, true);
+				if (resource != null) {
 					meta = resource.getMetadata();
-				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		}
 		return meta;
 	}
-
-	protected WebResource retrieveResource(Locator location) throws Exception {
-		return this.downloader.download(location);
+	
+	protected WebResource retrieveResource(Locator location, boolean subordinate) {
+		ResourceStatus status = null;
+		try {
+			WebResource resource = this.downloader.download(location);
+			status = ResourceStatus.SUCCESS;
+			return resource;
+		} catch (Exception e) {
+			status = ResourceStatus.FAIL;
+			return null;
+		} finally {
+			notifyResourceEvent(location, subordinate, ResourceOperation.GET, status);
+		}
 	}
 
-	protected void storeResource(WebResource resource, List<ResourceMetadata> links, boolean subordinate) throws IOException {
+	protected void storeResource(WebResource resource, List<ResourceMetadata> links, boolean subordinate) {
 		final Locator location = resource.getMetadata().getFinalLocation();
 		ResourceStatus status = null;
 		try {
 			if (hasStored(location)) {
-				status = ResourceStatus.SKIPPED;
+				status = ResourceStatus.SKIP;
 			} else {
 				this.hive.store(resource, links);
 				this.done.add(location);
 				this.stored.add(location);
-				status = ResourceStatus.SUCCEEDED;
+				status = ResourceStatus.SUCCESS;
 			}
 		} catch (IOException e) {
-			status = ResourceStatus.FAILED;
-			throw e;
+			status = ResourceStatus.FAIL;
 		} finally {
 			notifyResourceEvent(location, subordinate, ResourceOperation.STORE, status);
 		}
