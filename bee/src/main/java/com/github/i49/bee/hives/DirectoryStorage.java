@@ -39,9 +39,7 @@ public class DirectoryStorage implements Storage {
 			if (content != null) {
 				stream.write(content);
 			}
-			log.debug("Stored content at " + path.toString());
 		} catch (IOException e) {
-			log.debug("Failed to store content at " + path.toString());
 			throw e;
 		}
 		Files.setLastModifiedTime(fullpath, lastModified);

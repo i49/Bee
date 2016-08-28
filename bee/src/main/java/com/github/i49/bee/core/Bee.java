@@ -3,9 +3,11 @@ package com.github.i49.bee.core;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,11 +36,17 @@ public class Bee {
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
 	private final Map<Locator, ResourceMetadata> visited = new HashMap<>();
-	
-	private BeeStatistics stats;
-	private Reporter reporter;
 
+	private final Set<Locator> done = new HashSet<>();
+	private final Set<Locator> stored = new HashSet<>();
+	
+	private final List<BeeEventListener> listeners = new ArrayList<>();
+	
+	private Seed currentSeed;
+	private int currentDistance; 
+	
 	public Bee() {
+		addDefaultEventListeners();
 	}
 
 	public List<Seed> getSeeds() {
@@ -47,6 +55,10 @@ public class Bee {
 	
 	public List<WebSite> getSites() {
 		return sites;
+	}
+	
+	public List<BeeEventListener> getEventListeners() {
+		return listeners;
 	}
 	
 	public void launch() {
@@ -61,10 +73,6 @@ public class Bee {
 	}
 	
 	protected void prepareTrips() throws IOException {
-		this.stats = new BeeStatistics();
-		if (this.reporter == null) {
-			this.reporter = createDefaultReporter();
-		}
 		if (this.hive == null) {
 			this.hive = createDefaultHive();
 		}
@@ -87,31 +95,41 @@ public class Bee {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		this.reporter.reportTotalResult(this.stats);
 	}
 	
 	protected void makeTrip(Seed seed) {
-		Locator location = Locator.parse(seed.getLocation());
-		if (location == null) {
-			return;
-		}
-		this.tasks.clear();
-		this.tasks.add(new Task(location));
-		doAllTasks(seed.getDistanceLimit());
+		prepareTrip(seed);
+		doAllTasks();
+		unprepareTrip();
 	}
 	
-	protected void doAllTasks(int distanceLimit) {
+	protected void prepareTrip(Seed seed) {
+		this.done.clear();
+		this.currentSeed = seed;
+		this.currentDistance = 0;
+		this.tasks.clear();
+		Locator location = Locator.parse(seed.getLocation());
+		if (location != null) {
+			this.tasks.add(new Task(location));
+		}
+	}
+	
+	protected void unprepareTrip() {
+	}
+	
+	protected void doAllTasks() {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
-			List<ResourceMetadata> links = doTask(task, distanceLimit);
+			List<ResourceMetadata> links = doTask(task);
 			if (links != null && links.size() > 0) {
 				addNewTasks(links, task.getDistance() + 1);
 			}
 		}
 	}
 	
-	protected List<ResourceMetadata> doTask(Task task, int distanceLimit) {
-		final boolean visitNew = (task.getDistance() < distanceLimit);
+	protected List<ResourceMetadata> doTask(Task task) {
+		this.currentDistance = task.getDistance();
+		final boolean visitNew = (currentDistance < currentSeed.getDistanceLimit());
 		List<ResourceMetadata> links = null;
 		if (hasVisited(task.getLocation())) {
 			task.setStatus(Task.Status.SKIPPED);
@@ -119,15 +137,12 @@ public class Bee {
 			try {
 				links = visit(task.getLocation(), visitNew);
 				task.setStatus(Task.Status.DONE);
-				this.stats.successes++;
 			} catch (Exception e) {
 				log.error(e.getMessage());
 				log.debug("Exception: ", e);
 				task.setStatus(Task.Status.FAILED);
-				this.stats.failures++;
 			}
 		}
-		this.reporter.reportTaskResult(task);
 		return links;
 	}
 	
@@ -144,7 +159,7 @@ public class Bee {
 		if (resource instanceof HtmlWebResource) {
 			links = parseHtmlResource((HtmlWebResource)resource, visitNew);
 		} else {
-			storeResource(resource);
+			storeResource(resource, null, false);
 		}
 		return links;
 	}
@@ -152,7 +167,9 @@ public class Bee {
 	protected List<ResourceMetadata> parseHtmlResource(HtmlWebResource resource, boolean visitNew) throws IOException {
 		List<ResourceMetadata> internal = visitInternalResources(resource);
 		List<ResourceMetadata> external = visitExternalResources(resource, visitNew);
-		storeResource(resource, internal, external);
+		List<ResourceMetadata> all = new ArrayList<>(internal);
+		all.addAll(external);
+		storeResource(resource, all, false);
 		return external;
 	}
 
@@ -170,12 +187,12 @@ public class Bee {
 	protected ResourceMetadata visitInternalResource(Locator location) {
 		ResourceMetadata meta = null;
 		if (canVisit(location)) {
-			if (hasVisited(location)) {
+			if (hasDone(location)) {
 				meta = getVisited(location);
 			} else {
 				try {
 					WebResource resource = retrieveResource(location);
-					storeResource(resource);
+					storeResource(resource, null, true);
 					meta = addToHistory(resource);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -217,14 +234,24 @@ public class Bee {
 		return this.downloader.download(location);
 	}
 
-	protected void storeResource(WebResource resource) throws IOException {
-		this.hive.store(resource, null);
-	}
-	
-	protected void storeResource(WebResource resource, List<ResourceMetadata> internal, List<ResourceMetadata> external) throws IOException {
-		List<ResourceMetadata> all = new ArrayList<>(internal);
-		all.addAll(external);
-		this.hive.store(resource, all);
+	protected void storeResource(WebResource resource, List<ResourceMetadata> links, boolean subordinate) throws IOException {
+		final Locator location = resource.getMetadata().getFinalLocation();
+		ResourceStatus status = null;
+		try {
+			if (hasStored(location)) {
+				status = ResourceStatus.SKIPPED;
+			} else {
+				this.hive.store(resource, links);
+				this.done.add(location);
+				this.stored.add(location);
+				status = ResourceStatus.SUCCEEDED;
+			}
+		} catch (IOException e) {
+			status = ResourceStatus.FAILED;
+			throw e;
+		} finally {
+			notifyResourceEvent(location, subordinate, ResourceOperation.STORE, status);
+		}
 	}
 	
 	protected boolean canVisit(Locator location) {
@@ -234,6 +261,14 @@ public class Bee {
 			}
 		}
 		return false;
+	}
+	
+	protected boolean hasDone(Locator location) {
+		return done.contains(location);
+	}
+	
+	protected boolean hasStored(Locator location) {
+		return this.stored.contains(location);
 	}
 
 	protected boolean hasVisited(Locator location) {
@@ -253,27 +288,26 @@ public class Bee {
 		return meta;
 	}
 	
-	protected Reporter createDefaultReporter() {
-		return new DefaultReporter();
+	protected void notifyResourceEvent(Locator location, boolean subordinate, ResourceOperation operation, ResourceStatus status) {
+		final int distance = subordinate ? this.currentDistance + 1 : this.currentDistance;
+		ResourceEvent e = new ResourceEvent(location, operation);
+		e.setDistance(distance);
+		e.setSubordinate(subordinate);
+		e.setStatus(status);
+		fireResourceEvent(e);
+	}
+	
+	protected void fireResourceEvent(ResourceEvent e) {
+		for (BeeEventListener listener : this.listeners) {
+			listener.handleResourceEvent(e);
+		}
 	}
 	
 	protected Hive createDefaultHive() {
 		return new DefaultHive();
 	}
-
-	private static class BeeStatistics implements Statistics {
-
-		private int successes;
-		private int failures;
-		
-		@Override
-		public int getSuccesses() {
-			return successes;
-		}
-
-		@Override
-		public int getFailures() {
-			return failures;
-		}
+	
+	protected void addDefaultEventListeners() {
+		this.listeners.add(new DefaultReporter());
 	}
 }

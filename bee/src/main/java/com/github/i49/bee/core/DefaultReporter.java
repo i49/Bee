@@ -1,30 +1,30 @@
 package com.github.i49.bee.core;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-public class DefaultReporter implements Reporter {
+public class DefaultReporter implements BeeEventListener {
 
 	private static final Log log = LogFactory.getLog(DefaultReporter.class);
-	
-	@Override
-	public void reportTaskResult(Task task) {
-		log.info("[" + task.getDistance() + "]" + mapTaskStatus(task.getStatus()) + task.getLocation().toString());
-	}
 
-	@Override
-	public void reportTotalResult(Statistics stat) {
-		log.info("Successes: " + stat.getSuccesses() + " Failures: " + stat.getFailures());
+	private static final Map<ResourceStatus, String> statusMap = new HashMap<>();
+	
+	static {
+		statusMap.put(ResourceStatus.SUCCEEDED, "SUCCESS");
+		statusMap.put(ResourceStatus.FAILED, "FAIL");
+		statusMap.put(ResourceStatus.SKIPPED, "SKIP");
 	}
 	
-	private static String mapTaskStatus(Task.Status status) {
-		switch (status) {
-		case DONE:
-			return "+";
-		case FAILED:
-			return "!";
-		default:
-			return " ";
+	@Override
+	public void handleResourceEvent(ResourceEvent e) {
+		ResourceOperation operation = e.getOperation();
+		String status = statusMap.get(e.getStatus());
+		String indent = e.isSubordinate() ? "  " : "";
+		if (operation == ResourceOperation.STORE) {
+			log.info(indent + "@" + e.getDistance() + " STORE[" + status + "] " + e.getLocation());
 		}
 	}
 }
