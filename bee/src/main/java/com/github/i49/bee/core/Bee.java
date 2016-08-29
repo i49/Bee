@@ -14,10 +14,9 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
-import com.github.i49.bee.web.HtmlWebResource;
+import com.github.i49.bee.web.HtmlResourceContent;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
 
@@ -35,8 +34,8 @@ public class Bee {
 	private Hive hive; 
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
-	private final Map<Locator, ResourceMetadata> visited = new HashMap<>();
 
+	private final Map<Locator, WebResource> retrieved = new HashMap<>();
 	private final Set<Locator> done = new HashSet<>();
 	private final Set<Locator> stored = new HashSet<>();
 	
@@ -78,7 +77,7 @@ public class Bee {
 		}
 		this.hive.open();
 		this.tasks.clear();
-		this.visited.clear();
+		this.retrieved.clear();
 	}
 	
 	protected void unprepareAfterAllTrips() throws IOException {
@@ -120,111 +119,114 @@ public class Bee {
 	protected void doAllTasks() {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
-			List<ResourceMetadata> links = doTask(task);
-			if (links != null && links.size() > 0) {
-				addNewTasks(links, task.getDistance() + 1);
+			int distance = task.getDistance();
+			List<WebResource> links = doTask(task);
+			if (links != null && links.size() > 0 && distance < currentSeed.getDistanceLimit()) {
+				addNewTasks(links, distance + 1);
 			}
 		}
 	}
 	
-	protected List<ResourceMetadata> doTask(Task task) {
+	protected List<WebResource> doTask(Task task) {
 		this.currentDistance = task.getDistance();
 		final boolean visitNew = (currentDistance < currentSeed.getDistanceLimit());
-		List<ResourceMetadata> links = null;
-		if (!hasVisited(task.getLocation())) {
-			links = visit(task.getLocation(), visitNew);
+		if (hasDone(task.getLocation())) {
+			return null;
+		} else {
+			return visit(task.getLocation(), visitNew);
 		}
-		return links;
 	}
 	
-	protected void addNewTasks(List<ResourceMetadata> links, int distance) {
+	protected void addNewTasks(List<WebResource> links, int distance) {
 		for (int i = 0; i < links.size(); ++i) {
 			this.tasks.add(i, new Task(links.get(i).getFinalLocation(), distance));
 		}
 	}
 	
-	protected List<ResourceMetadata> visit(Locator location, boolean visitNew) {
-		List<ResourceMetadata> links = null;
+	protected List<WebResource> visit(Locator location, boolean visitNew) {
+		List<WebResource> links = null;
 		WebResource resource = retrieveResource(location, false);
 		if (resource == null) {
 			return null;
 		}
-		addToHistory(resource);
-		if (resource instanceof HtmlWebResource) {
-			links = parseHtmlResource((HtmlWebResource)resource, visitNew);
+		if (resource.getContent() instanceof HtmlResourceContent) {
+			HtmlResourceContent content = (HtmlResourceContent)(resource.getContent());
+			links = parseHtmlResource(resource, content, visitNew);
 		} else {
 			storeResource(resource, null, false);
 		}
 		return links;
 	}
 	
-	protected List<ResourceMetadata> parseHtmlResource(HtmlWebResource resource, boolean visitNew) {
-		List<ResourceMetadata> internal = visitInternalResources(resource);
-		List<ResourceMetadata> external = visitExternalResources(resource, visitNew);
-		List<ResourceMetadata> all = new ArrayList<>(internal);
+	protected List<WebResource> parseHtmlResource(WebResource resource, HtmlResourceContent content, boolean visitNew) {
+		List<WebResource> internal = visitInternalResources(content);
+		List<WebResource> external = visitExternalResources(content, visitNew);
+		List<WebResource> all = new ArrayList<>(internal);
 		all.addAll(external);
 		storeResource(resource, all, false);
 		return external;
 	}
 
-	protected List<ResourceMetadata> visitInternalResources(HtmlWebResource resource) {
-		List<ResourceMetadata> result = new ArrayList<>();
-		for (Link link: resource.getComponentLinks()) {
-			ResourceMetadata meta = visitInternalResource(link.getLocation());
-			if (meta != null) {
-				result.add(meta);
+	protected List<WebResource> visitInternalResources(HtmlResourceContent content) {
+		List<WebResource> children = new ArrayList<>();
+		for (Link link: content.getComponentLinks()) {
+			WebResource child = visitInternalResource(link.getLocation());
+			if (child != null) {
+				children.add(child);
 			}
 		}
-		return result;
+		return children;
 	}
 	
-	protected ResourceMetadata visitInternalResource(Locator location) {
-		ResourceMetadata meta = null;
+	protected WebResource visitInternalResource(Locator location) {
 		if (canVisit(location)) {
-			if (hasDone(location)) {
-				meta = getVisited(location);
-			} else {
-				WebResource resource = retrieveResource(location, true);
-				if (resource != null) {
-					storeResource(resource, null, true);
-					meta = addToHistory(resource);
-				}
+			WebResource child = getRetrieved(location);
+			if (child == null) {
+				child= retrieveResource(location, true);
 			}
+			if (child != null && child.hasContent()) {
+				storeResource(child, null, true);
+			}
+			return child;
+		} else {
+			return null;
 		}
-		return meta;
 	}
 	
-	protected List<ResourceMetadata> visitExternalResources(HtmlWebResource resource, boolean visitNew) {
-		List<ResourceMetadata> result = new ArrayList<>();
+	protected List<WebResource> visitExternalResources(HtmlResourceContent resource, boolean visitNew) {
+		List<WebResource> result = new ArrayList<>();
 		for (Link link: resource.getExternalLinks()) {
-			ResourceMetadata meta = visitExternalResource(link.getLocation(), visitNew);
-			if (meta != null) {
-				result.add(meta);
+			WebResource child = visitExternalResource(link.getLocation(), visitNew);
+			if (child != null) {
+				result.add(child);
 			}
 		}
 		return result;
 	}
 	
-	protected ResourceMetadata visitExternalResource(Locator location, boolean visitNew) {
-		ResourceMetadata meta = null;
+	protected WebResource visitExternalResource(Locator location, boolean visitNew) {
 		if (canVisit(location)) {
-			if (hasVisited(location)) {
-				meta = getVisited(location);
-			} else if (visitNew) {
-				WebResource resource = retrieveResource(location, true);
-				if (resource != null) {
-					meta = resource.getMetadata();
-				}
+			WebResource child = getRetrieved(location);
+			if (child == null && visitNew) {
+				child = retrieveResource(location, true);
 			}
+			return child;
+		} else {
+			return null;
 		}
-		return meta;
 	}
 	
 	protected WebResource retrieveResource(Locator location, boolean subordinate) {
 		ResourceStatus status = null;
 		try {
-			WebResource resource = this.downloader.download(location);
-			status = ResourceStatus.SUCCESS;
+			WebResource resource = getRetrieved(location);
+			if (resource != null) {
+				status = ResourceStatus.CACHE;
+			} else {
+				resource = this.downloader.download(location);
+				addRetrieved(resource);
+				status = ResourceStatus.SUCCESS;
+			}
 			return resource;
 		} catch (Exception e) {
 			status = ResourceStatus.FAIL;
@@ -234,8 +236,8 @@ public class Bee {
 		}
 	}
 
-	protected void storeResource(WebResource resource, List<ResourceMetadata> links, boolean subordinate) {
-		final Locator location = resource.getMetadata().getFinalLocation();
+	protected void storeResource(WebResource resource, List<WebResource> links, boolean subordinate) {
+		final Locator location = resource.getFinalLocation();
 		ResourceStatus status = null;
 		try {
 			if (hasStored(location)) {
@@ -249,6 +251,10 @@ public class Bee {
 		} catch (IOException e) {
 			status = ResourceStatus.FAIL;
 		} finally {
+			if (status == null) {
+				log.debug("xxx");
+			}
+			resource.setContent(null);
 			notifyResourceEvent(location, subordinate, ResourceOperation.STORE, status);
 		}
 	}
@@ -270,21 +276,15 @@ public class Bee {
 		return this.stored.contains(location);
 	}
 
-	protected boolean hasVisited(Locator location) {
-		return (getVisited(location) != null);
-	}
-	
-	protected ResourceMetadata getVisited(Locator location) {
-		return this.visited.get(location);
+	protected WebResource getRetrieved(Locator location) {
+		return this.retrieved.get(location);
 	}
 
-	protected ResourceMetadata addToHistory(WebResource resource) {
-		ResourceMetadata meta = resource.getMetadata();
-		this.visited.put(meta.getLocation(), meta);
-		if (meta.isRedirected()) {
-			this.visited.put(meta.getRedirectLocation(), meta);
+	protected void addRetrieved(WebResource resource) {
+		this.retrieved.put(resource.getLocation(), resource);
+		if (resource.isRedirected()) {
+			this.retrieved.put(resource.getRedirectLocation(), resource);
 		}
-		return meta;
 	}
 	
 	protected void notifyResourceEvent(Locator location, boolean subordinate, ResourceOperation operation, ResourceStatus status) {

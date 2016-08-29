@@ -36,17 +36,19 @@ public class WebDownloader implements AutoCloseable {
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
 			final int code = response.getStatusLine().getStatusCode();
 			if (code == HttpStatus.SC_OK) {
-				ResourceMetadata metadata = createMetadata(location, context, response);
-				return createWebResource(metadata, response.getEntity());
+				WebResource resource = createResource(location, context, response);
+				ResourceContent content = createContent(resource, response.getEntity());
+				resource.setContent(content);
+				return resource;
 			} else {
 				throw new IOException("Failed to get " + location.toString() + " (" + code + ")");
 			}
 		}
 	}
 	
-	private ResourceMetadata createMetadata(Locator location, HttpClientContext context, HttpResponse response) throws UnsupportedMediaException {
+	private WebResource createResource(Locator location, HttpClientContext context, HttpResponse response) throws UnsupportedMediaException {
 		final HttpEntity entity = response.getEntity();
-		ResourceMetadata.Builder builder = ResourceMetadata.builder();
+		WebResource.Builder builder = WebResource.builder();
 		builder.setLocation(location);
 		builder.setMediaType(parseMediaType(entity));
 		builder.setRedirectLocation(getRedirectLocation(context));
@@ -66,15 +68,15 @@ public class WebDownloader implements AutoCloseable {
 		}
 	}
 	
-	private WebResource createWebResource(ResourceMetadata metadata, HttpEntity entity) throws Exception {
-		final MediaType mediaType = metadata.getMediaType();
+	private ResourceContent createContent(WebResource resource, HttpEntity entity) throws Exception {
+		final MediaType mediaType = resource.getMediaType();
 		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
 			try (InputStream stream = entity.getContent()) {
-				return HtmlWebResource.create(metadata, stream, DEFAULT_ENCODING);
+				return HtmlResourceContent.create(resource.getFinalLocation(), stream, DEFAULT_ENCODING);
 			}
 		} else {
 			byte[] content = EntityUtils.toByteArray(entity);
-			return BinaryWebResource.create(metadata, content);
+			return BinaryResourceContent.create(content);
 		}
 	}
 	

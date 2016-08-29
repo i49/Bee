@@ -8,7 +8,7 @@ import java.util.Map;
 
 import com.github.i49.bee.web.LinkSource;
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.ResourceMetadata;
+import com.github.i49.bee.web.ResourceContent;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
@@ -47,29 +47,30 @@ public abstract class AbstractHive implements Hive {
 	}
 
 	@Override
-	public void store(WebResource resource, List<ResourceMetadata> links) throws IOException {
-		String newLocation = this.layout.mapPath(resource.getMetadata().getFinalLocation());
-		if (links != null && !links.isEmpty()) {
-			rewriteResource((LinkSource)resource, newLocation, links);
+	public void store(WebResource resource, List<WebResource> links) throws IOException {
+		String newLocation = this.layout.mapPath(resource.getFinalLocation());
+		ResourceContent content = resource.getContent();
+		if (content instanceof LinkSource && links != null && !links.isEmpty()) {
+			rewriteResource((LinkSource)content, newLocation, links);
 		}
-		byte[] content = serializeResource(resource);
-		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
-		this.storage.saveAt(newLocation, content, lastModified);
+		byte[] bytes = serializeResource(resource);
+		FileTime lastModified = FileTime.from(resource.getLastModified().toInstant());
+		this.storage.saveAt(newLocation, bytes, lastModified);
 	}
 	
 	protected byte[] serializeResource(WebResource resource) {
-		return resource.getContent(this.serializer);
+		return resource.getContent().getBytes(this.serializer);
 	}
 	
-	protected void rewriteResource(LinkSource resource, String newLocation, List<ResourceMetadata> links) {
+	protected void rewriteResource(LinkSource resource, String newLocation, List<WebResource> links) {
 		Map<Locator, Locator> map = createRewriteMap(newLocation, links);
 		resource.rewriteLinks(map);
 	}
 	
-	protected Map<Locator, Locator> createRewriteMap(String newLocation, List<ResourceMetadata> links) {
+	protected Map<Locator, Locator> createRewriteMap(String newLocation, List<WebResource> links) {
 		Locator baseLocation = Locator.pathOf(newLocation).getParent();
 		Map<Locator, Locator> map = new HashMap<>();
-		for (ResourceMetadata link : links) {
+		for (WebResource link : links) {
 			final Locator target = link.getFinalLocation();
 			final String mappedTarget = this.layout.mapPath(target);
 			Locator targetLocation = Locator.pathOf(mappedTarget);

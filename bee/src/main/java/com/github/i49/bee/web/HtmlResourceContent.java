@@ -18,14 +18,15 @@ import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
-public class HtmlWebResource extends WebResource implements LinkSource {
+public class HtmlResourceContent implements ResourceContent, LinkSource {
 
-	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
+	private static final Log log = LogFactory.getLog(HtmlResourceContent.class);
 
+	private final Locator baseLocation;
 	private final Document document;
 
-	protected HtmlWebResource(ResourceMetadata metadata, Document document) {
-		super(metadata);
+	protected HtmlResourceContent(Locator baseLocation, Document document) {
+		this.baseLocation = baseLocation;
 		this.document = document;
 	}
 	
@@ -34,7 +35,7 @@ public class HtmlWebResource extends WebResource implements LinkSource {
 	}
 
 	@Override
-	public byte[] getContent(ResourceSerializer serializer) {
+	public byte[] getBytes(ResourceSerializer serializer) {
 		return serializer.writeHtmlDocument(getDocument());
 	}
 	
@@ -130,9 +131,9 @@ public class HtmlWebResource extends WebResource implements LinkSource {
 	protected Locator resolve(String value) {
 		value = value.trim();
 		if (value.isEmpty() || value.equals("#")) {
-			return getMetadata().getFinalLocation();
+			return getBase();
 		}
-		return getMetadata().getFinalLocation().resolve(value);
+		return getBase().resolve(value);
 	}
 
 	protected void rewriteLinks(String element, String attribute, Map<Locator, Locator> map) {
@@ -171,11 +172,15 @@ public class HtmlWebResource extends WebResource implements LinkSource {
 		return newValue;
 	}
 	
-	public static HtmlWebResource create(ResourceMetadata metadata, InputStream stream, String encoding) throws SAXException, IOException {
+	protected Locator getBase() {
+		return baseLocation;
+	}
+	
+	public static HtmlResourceContent create(Locator baseLocation, InputStream stream, String encoding) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		InputSource source = new InputSource(stream);
 		source.setEncoding(encoding);
 		Document document = builder.parse(source);
-		return new HtmlWebResource(metadata, document);
+		return new HtmlResourceContent(baseLocation, document);
 	}
 }
