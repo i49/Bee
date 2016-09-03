@@ -1,7 +1,7 @@
 package com.github.i49.bee.web;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -167,10 +167,11 @@ public class HtmlWebResource extends AbstractWebResource implements LinkProvidin
 		return newValue;
 	}
 	
-	public static HtmlWebResource create(ResourceMetadata metadata, InputStream stream, String encoding) throws SAXException, IOException {
+	public static HtmlWebResource create(ResourceMetadata metadata, byte[] content, String defaultEncoding) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
-		InputSource source = new InputSource(stream);
-		source.setEncoding(encoding);
+		InputSource source = new InputSource(new ByteArrayInputStream(content));
+		String encoding = metadata.getContentEncoding();
+		source.setEncoding((encoding != null) ? encoding : defaultEncoding);
 		Document document = builder.parse(source);
 		return new HtmlWebResource(metadata, document);
 	}

@@ -1,6 +1,7 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 
 import com.github.i49.bee.web.Locator;
@@ -9,7 +10,9 @@ import com.github.i49.bee.web.WebResource;
 
 public interface Hive {
 	
-	void setBasePath(String basePath);
+	Path getBasePath();
+	
+	void setBasePath(Path basePath);
 	
 	void open() throws IOException;
 	

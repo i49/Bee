@@ -1,6 +1,8 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,20 +17,25 @@ public abstract class AbstractHive implements Hive {
 
 	private static final String DEFAULT_BASE_PATH = "hive";
 	
-	private String basePath = DEFAULT_BASE_PATH;
-	
+	private Path basePath;
 	private Layout layout;
 	private Storage storage;
 	private ResourceSerializer serializer = new DefaultResourceSerializer();
 
 	protected AbstractHive() {
+		this.basePath = Paths.get(DEFAULT_BASE_PATH);
 	}
 
 	@Override
-	public void setBasePath(String basePath) {
-		this.basePath = basePath;
+	public Path getBasePath() {
+		return basePath;
 	}
 
+	@Override
+	public void setBasePath(Path basePath) {
+		this.basePath = basePath;
+	}
+	
 	@Override
 	public void open() throws IOException {
 		if (this.layout == null) {

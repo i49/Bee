@@ -1,6 +1,8 @@
 package com.github.i49.bee.core;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -21,6 +23,8 @@ import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
+import com.github.i49.bee.web.BasicWebDownloader;
+import com.github.i49.bee.web.CachingWebDownloader;
 import com.github.i49.bee.web.WebResource;
 
 /**
@@ -90,13 +94,13 @@ public class Bee {
 	}
 	
 	protected void makeAllTrips(List<Seed> seeds) {
-		try (WebDownloader downloader = new WebDownloader()) {
+		try (WebDownloader downloader = createWebDownloader(this.hive)) {
 			this.downloader = downloader;
 			for (Seed seed : seeds) {
 				makeTrip(seed);
 			}
 			this.downloader = null;
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -316,6 +320,11 @@ public class Bee {
 	
 	protected Hive createDefaultHive() {
 		return new DefaultHive();
+	}
+	
+	protected WebDownloader createWebDownloader(Hive hive) {
+		Path pathToCache = Paths.get(hive.getBasePath().toString() + ".cache");
+		return new BasicWebDownloader();
 	}
 	
 	protected void addDefaultEventListeners() {

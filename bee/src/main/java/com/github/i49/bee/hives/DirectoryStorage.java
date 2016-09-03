@@ -2,8 +2,6 @@ package com.github.i49.bee.hives;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -15,15 +13,14 @@ public class DirectoryStorage implements Storage {
 	
 	private static final Log log = LogFactory.getLog(DirectoryStorage.class);
 
-	private final FileSystem fs = FileSystems.getDefault();
 	private Path root;
 	
 	public DirectoryStorage() {
 	}
 	
 	@Override
-	public void open(String path) throws IOException {
-		this.root = this.fs.getPath(path);
+	public void open(Path path) throws IOException {
+		this.root = path;
 		Files.createDirectories(this.root);
 	}
 
