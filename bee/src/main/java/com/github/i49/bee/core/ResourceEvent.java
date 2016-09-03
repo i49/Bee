@@ -8,6 +8,7 @@ public class ResourceEvent {
 	private final ResourceOperation operation;
 	private int distance;
 	private boolean subordinate;
+	private int entryNo;
 	private ResourceStatus status;
 	
 	public ResourceEvent(Locator location, ResourceOperation operation) {
@@ -37,6 +38,14 @@ public class ResourceEvent {
 
 	public void setSubordinate(boolean subordinate) {
 		this.subordinate = subordinate;
+	}
+
+	public int getEntryNo() {
+		return entryNo;
+	}
+
+	public void setEntryNo(int entryNo) {
+		this.entryNo = entryNo;
 	}
 
 	public ResourceStatus getStatus() {

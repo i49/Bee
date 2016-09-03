@@ -39,6 +39,7 @@ public class Bee {
 	
 	private final LinkedList<Task> tasks = new LinkedList<>();
 
+	private ResourceRegistry registry;
 	private final Map<Locator, WebResource> retrieved = new HashMap<>();
 	private final Set<Locator> done = new HashSet<>();
 	private final Set<Locator> stored = new HashSet<>();
@@ -82,6 +83,7 @@ public class Bee {
 		this.hive.open();
 		this.tasks.clear();
 		this.retrieved.clear();
+		this.registry = new ResourceRegistry();
 	}
 	
 	protected void unprepareAfterAllTrips() throws IOException {
@@ -231,6 +233,7 @@ public class Bee {
 			} else {
 				resource = this.downloader.download(location);
 				addRetrieved(location, resource);
+				addToRegistry(location, resource);
 				status = ResourceStatus.SUCCESS;
 			}
 			return resource;
@@ -290,11 +293,17 @@ public class Bee {
 		this.retrieved.put(resource.getMetadata().getLocation(), resource);
 	}
 	
+	protected void addToRegistry(Locator location, WebResource resource) {
+		this.registry.register(location, resource.getMetadata());
+	}
+	
 	protected void notifyResourceEvent(Locator location, boolean subordinate, ResourceOperation operation, ResourceStatus status) {
+		ResourceRegistry.Entry entry = this.registry.find(location);
 		final int distance = subordinate ? this.currentDistance + 1 : this.currentDistance;
 		ResourceEvent e = new ResourceEvent(location, operation);
 		e.setDistance(distance);
 		e.setSubordinate(subordinate);
+		e.setEntryNo((entry != null) ? entry.getEntryNo() : -1); 
 		e.setStatus(status);
 		fireResourceEvent(e);
 	}

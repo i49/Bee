@@ -9,9 +9,19 @@ public class DefaultReporter implements BeeEventListener {
 
 	@Override
 	public void handleResourceEvent(ResourceEvent e) {
-		String indent = e.isSubordinate() ? "  " : "";
-		String operation = e.getOperation().toString();
-		String status = e.getStatus().toString();
-		log.info(indent + "+" + e.getDistance() + " " + operation + "[" + status + "] " + e.getLocation());
+		StringBuilder builder = new StringBuilder();
+		if (e.isSubordinate()) {
+			builder.append("  ");
+		}
+		if (e.getEntryNo() >= 0) {
+			builder.append("#").append(e.getEntryNo());
+		} else {
+			builder.append("#-");
+		}
+		builder.append("@").append(e.getDistance());
+		builder.append(" ").append(e.getOperation());
+		builder.append("(").append(e.getStatus()).append(")");
+		builder.append(" ").append(e.getLocation());
+		log.info(builder.toString());
 	}
 }
