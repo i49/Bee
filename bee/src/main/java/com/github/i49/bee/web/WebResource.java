@@ -1,16 +1,8 @@
 package com.github.i49.bee.web;
 
-public abstract class WebResource {
+public interface WebResource {
 
-	private final ResourceMetadata metadata;
-	
-	public WebResource(ResourceMetadata metadata) {
-		this.metadata = metadata;
-	}
+	ResourceMetadata getMetadata();
 
-	public ResourceMetadata getMetadata() {
-		return metadata;
-	}
-
-	public abstract byte[] getBytes(ResourceSerializer serializer);
+	byte[] getBytes(ResourceSerializer serializer);
 }

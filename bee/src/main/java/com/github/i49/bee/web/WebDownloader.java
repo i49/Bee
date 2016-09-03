@@ -17,7 +17,6 @@ import org.apache.http.client.utils.DateUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.xml.sax.SAXException;
 
 public class WebDownloader implements AutoCloseable {
 

@@ -5,7 +5,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.github.i49.bee.web.LinkSource;
+import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.ResourceSerializer;
@@ -48,8 +48,8 @@ public abstract class AbstractHive implements Hive {
 	@Override
 	public void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException {
 		String newLocation = this.layout.mapPath(resource.getMetadata().getLocation());
-		if (resource instanceof LinkSource && links != null && !links.isEmpty()) {
-			rewriteResource((LinkSource)resource, newLocation, links);
+		if (resource instanceof LinkProvidingResource && links != null && !links.isEmpty()) {
+			rewriteResource((LinkProvidingResource)resource, newLocation, links);
 		}
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
@@ -60,7 +60,7 @@ public abstract class AbstractHive implements Hive {
 		return resource.getBytes(this.serializer);
 	}
 	
-	protected void rewriteResource(LinkSource resource, String newLocation, Map<Locator, ResourceMetadata> links) {
+	protected void rewriteResource(LinkProvidingResource resource, String newLocation, Map<Locator, ResourceMetadata> links) {
 		Map<Locator, Locator> map = createRewriteMap(newLocation, links);
 		resource.rewriteLinks(map);
 	}

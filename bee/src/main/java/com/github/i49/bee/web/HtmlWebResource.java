@@ -18,7 +18,7 @@ import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
-public class HtmlWebResource extends WebResource implements LinkSource {
+public class HtmlWebResource extends AbstractWebResource implements LinkProvidingResource {
 
 	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
 
@@ -34,7 +34,7 @@ public class HtmlWebResource extends WebResource implements LinkSource {
 	}
 	
 	@Override
-	public Collection<Link> getComponentLinks() {
+	public Collection<Link> getDependencyLinks() {
 		LinkedHashSet<Link> links = new LinkedHashSet<>();
 		collectStylesheets(links);
 		collectScripts(links);

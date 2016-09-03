@@ -16,9 +16,8 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
-import com.github.i49.bee.web.HtmlWebResource;
 import com.github.i49.bee.web.Link;
-import com.github.i49.bee.web.LinkSource;
+import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
@@ -157,51 +156,52 @@ public class Bee {
 		if (resource == null) {
 			return null;
 		}
-		if (resource instanceof HtmlWebResource) {
-			links = parseLinkSource((HtmlWebResource)resource, visitNew);
+		if (resource instanceof LinkProvidingResource) {
+			links = parseLinkProvidingResource((LinkProvidingResource)resource, visitNew);
 		} else {
 			storeResource(resource, null, false);
 		}
 		return links;
 	}
 	
-	protected Collection<ResourceMetadata> parseLinkSource(HtmlWebResource resource, boolean visitNew) {
-		Map<Locator, ResourceMetadata> children = visitChildResources(resource);
+	protected Collection<ResourceMetadata> parseLinkProvidingResource(LinkProvidingResource resource, boolean visitNew) {
+		Map<Locator, ResourceMetadata> depends = visitDependencies(resource);
 		Map<Locator, ResourceMetadata> neighbors = searchNeighbors(resource, visitNew);
 		Map<Locator, ResourceMetadata> all = new HashMap<>();
-		all.putAll(children);
+		all.putAll(depends);
 		all.putAll(neighbors);
 		storeResource(resource, all, false);
 		return neighbors.values();
 	}
-
-	protected Map<Locator, ResourceMetadata> visitChildResources(LinkSource resource) {
-		Map<Locator, ResourceMetadata> children = new LinkedHashMap<>();
-		for (Link link: resource.getComponentLinks()) {
-			WebResource child = visitChildResource(link.getLocation());
-			if (child != null) {
-				children.put(link.getLocation(), child.getMetadata());
+	
+	protected Map<Locator, ResourceMetadata> visitDependencies(LinkProvidingResource resource) {
+		Map<Locator, ResourceMetadata> depends = new LinkedHashMap<>();
+		for (Link link: resource.getDependencyLinks()) {
+			ResourceMetadata metadata = visitDependency(link.getLocation());
+			if (metadata != null) {
+				depends.put(link.getLocation(), metadata);
 			}
 		}
-		return children;
+		return depends;
 	}
 	
-	protected WebResource visitChildResource(Locator location) {
+	protected ResourceMetadata visitDependency(Locator location) {
 		if (canVisit(location)) {
-			WebResource child = getRetrieved(location);
-			if (child == null) {
-				child= retrieveResource(location, true);
+			ResourceRegistry.Entry entry = registry.find(location);
+			if (entry != null) {
+				return entry.getMetadata();
 			}
-			if (child != null) {
-				storeResource(child, null, true);
+			WebResource resource = retrieveResource(location, true);
+			if (resource != null) {
+				storeResource(resource, null, true);
 			}
-			return child;
+			return resource.getMetadata();
 		} else {
 			return null;
 		}
 	}
 	
-	protected Map<Locator, ResourceMetadata> searchNeighbors(LinkSource resource, boolean visitNew) {
+	protected Map<Locator, ResourceMetadata> searchNeighbors(LinkProvidingResource resource, boolean visitNew) {
 		Map<Locator, ResourceMetadata> neighbors = new LinkedHashMap<>();
 		for (Link link: resource.getExternalLinks()) {
 			WebResource neighbor = visitExternalResource(link.getLocation(), visitNew);

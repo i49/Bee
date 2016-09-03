@@ -3,9 +3,9 @@ package com.github.i49.bee.web;
 import java.util.Collection;
 import java.util.Map;
 
-public interface LinkSource {
+public interface LinkProvidingResource extends WebResource {
 	
-	Collection<Link> getComponentLinks();
+	Collection<Link> getDependencyLinks();
 	
 	Collection<Link> getExternalLinks();
 	
