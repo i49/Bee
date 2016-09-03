@@ -17,6 +17,7 @@ import org.apache.http.client.utils.DateUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.xml.sax.SAXException;
 
 public class WebDownloader implements AutoCloseable {
 
@@ -36,27 +37,42 @@ public class WebDownloader implements AutoCloseable {
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
 			final int code = response.getStatusLine().getStatusCode();
 			if (code == HttpStatus.SC_OK) {
-				WebResource resource = createResource(location, context, response);
-				ResourceContent content = createContent(resource, response.getEntity());
-				resource.setContent(content);
-				return resource;
+				return createResource(location, context, response);
 			} else {
 				throw new IOException("Failed to get " + location.toString() + " (" + code + ")");
 			}
 		}
 	}
 	
-	private WebResource createResource(Locator location, HttpClientContext context, HttpResponse response) throws UnsupportedMediaException {
+	protected ResourceMetadata createMetadata(Locator initialLocation, HttpClientContext context, HttpResponse response) throws UnsupportedMediaException {
 		final HttpEntity entity = response.getEntity();
-		WebResource.Builder builder = WebResource.builder();
-		builder.setLocation(location);
+		ResourceMetadata.Builder builder = ResourceMetadata.builder();
+		builder.setLocation(getFinalLocation(initialLocation, context));
 		builder.setMediaType(parseMediaType(entity));
-		builder.setRedirectLocation(getRedirectLocation(context));
 		String lastModified = response.getLastHeader("Last-Modified").getValue();
 		if (lastModified != null) {
 			builder.setLastModified(DateUtils.parseDate(lastModified));
 		}
 		return builder.build();
+	}
+	
+	private WebResource createResource(Locator initialLocation, HttpClientContext context, HttpResponse response) throws Exception {
+		ResourceMetadata metadata = createMetadata(initialLocation, context, response);
+		final MediaType mediaType = metadata.getMediaType();
+		final HttpEntity entity = response.getEntity();
+		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
+			try (InputStream stream = entity.getContent()) {
+				return HtmlWebResource.create(metadata, stream, DEFAULT_ENCODING);
+			}
+		} else {
+			byte[] content = EntityUtils.toByteArray(entity);
+			return BinaryWebResource.create(metadata, content);
+		}
+	}
+	
+	private static Locator getFinalLocation(Locator initialLocation, HttpClientContext context) {
+		Locator redirectLocation = getRedirectLocation(context);
+		return (redirectLocation != null) ? redirectLocation : initialLocation;
 	}
 
 	private static Locator getRedirectLocation(HttpClientContext context) {
@@ -65,18 +81,6 @@ public class WebDownloader implements AutoCloseable {
 			return null;
 		} else {
 			return Locator.fromURI(locations.get(locations.size() - 1));
-		}
-	}
-	
-	private ResourceContent createContent(WebResource resource, HttpEntity entity) throws Exception {
-		final MediaType mediaType = resource.getMediaType();
-		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
-			try (InputStream stream = entity.getContent()) {
-				return HtmlResourceContent.create(resource.getFinalLocation(), stream, DEFAULT_ENCODING);
-			}
-		} else {
-			byte[] content = EntityUtils.toByteArray(entity);
-			return BinaryResourceContent.create(content);
 		}
 	}
 	

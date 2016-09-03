@@ -2,8 +2,10 @@ package com.github.i49.bee.core;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +16,11 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
-import com.github.i49.bee.web.HtmlResourceContent;
+import com.github.i49.bee.web.HtmlWebResource;
 import com.github.i49.bee.web.Link;
+import com.github.i49.bee.web.LinkSource;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
 
@@ -120,14 +124,14 @@ public class Bee {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
 			int distance = task.getDistance();
-			List<WebResource> links = doTask(task);
+			Collection<ResourceMetadata> links = doTask(task);
 			if (links != null && links.size() > 0 && distance < currentSeed.getDistanceLimit()) {
 				addNewTasks(links, distance + 1);
 			}
 		}
 	}
 	
-	protected List<WebResource> doTask(Task task) {
+	protected Collection<ResourceMetadata> doTask(Task task) {
 		this.currentDistance = task.getDistance();
 		final boolean visitNew = (currentDistance < currentSeed.getDistanceLimit());
 		if (hasDone(task.getLocation())) {
@@ -137,54 +141,56 @@ public class Bee {
 		}
 	}
 	
-	protected void addNewTasks(List<WebResource> links, int distance) {
-		for (int i = 0; i < links.size(); ++i) {
-			this.tasks.add(i, new Task(links.get(i).getFinalLocation(), distance));
+	protected void addNewTasks(Collection<ResourceMetadata> links, int distance) {
+		int pos = 0;
+		for (ResourceMetadata metadata : links) {
+			Task task = new Task(metadata.getLocation(), distance);
+			this.tasks.add(pos++, task);
 		}
 	}
 	
-	protected List<WebResource> visit(Locator location, boolean visitNew) {
-		List<WebResource> links = null;
+	protected Collection<ResourceMetadata> visit(Locator location, boolean visitNew) {
+		Collection<ResourceMetadata> links = null;
 		WebResource resource = retrieveResource(location, false);
 		if (resource == null) {
 			return null;
 		}
-		if (resource.getContent() instanceof HtmlResourceContent) {
-			HtmlResourceContent content = (HtmlResourceContent)(resource.getContent());
-			links = parseHtmlResource(resource, content, visitNew);
+		if (resource instanceof HtmlWebResource) {
+			links = parseLinkSource((HtmlWebResource)resource, visitNew);
 		} else {
 			storeResource(resource, null, false);
 		}
 		return links;
 	}
 	
-	protected List<WebResource> parseHtmlResource(WebResource resource, HtmlResourceContent content, boolean visitNew) {
-		List<WebResource> internal = visitInternalResources(content);
-		List<WebResource> external = visitExternalResources(content, visitNew);
-		List<WebResource> all = new ArrayList<>(internal);
-		all.addAll(external);
+	protected Collection<ResourceMetadata> parseLinkSource(HtmlWebResource resource, boolean visitNew) {
+		Map<Locator, ResourceMetadata> children = visitChildResources(resource);
+		Map<Locator, ResourceMetadata> neighbors = searchNeighbors(resource, visitNew);
+		Map<Locator, ResourceMetadata> all = new HashMap<>();
+		all.putAll(children);
+		all.putAll(neighbors);
 		storeResource(resource, all, false);
-		return external;
+		return neighbors.values();
 	}
 
-	protected List<WebResource> visitInternalResources(HtmlResourceContent content) {
-		List<WebResource> children = new ArrayList<>();
-		for (Link link: content.getComponentLinks()) {
-			WebResource child = visitInternalResource(link.getLocation());
+	protected Map<Locator, ResourceMetadata> visitChildResources(LinkSource resource) {
+		Map<Locator, ResourceMetadata> children = new LinkedHashMap<>();
+		for (Link link: resource.getComponentLinks()) {
+			WebResource child = visitChildResource(link.getLocation());
 			if (child != null) {
-				children.add(child);
+				children.put(link.getLocation(), child.getMetadata());
 			}
 		}
 		return children;
 	}
 	
-	protected WebResource visitInternalResource(Locator location) {
+	protected WebResource visitChildResource(Locator location) {
 		if (canVisit(location)) {
 			WebResource child = getRetrieved(location);
 			if (child == null) {
 				child= retrieveResource(location, true);
 			}
-			if (child != null && child.hasContent()) {
+			if (child != null) {
 				storeResource(child, null, true);
 			}
 			return child;
@@ -193,15 +199,15 @@ public class Bee {
 		}
 	}
 	
-	protected List<WebResource> visitExternalResources(HtmlResourceContent resource, boolean visitNew) {
-		List<WebResource> result = new ArrayList<>();
+	protected Map<Locator, ResourceMetadata> searchNeighbors(LinkSource resource, boolean visitNew) {
+		Map<Locator, ResourceMetadata> neighbors = new LinkedHashMap<>();
 		for (Link link: resource.getExternalLinks()) {
-			WebResource child = visitExternalResource(link.getLocation(), visitNew);
-			if (child != null) {
-				result.add(child);
+			WebResource neighbor = visitExternalResource(link.getLocation(), visitNew);
+			if (neighbor != null) {
+				neighbors.put(link.getLocation(), neighbor.getMetadata());
 			}
 		}
-		return result;
+		return neighbors;
 	}
 	
 	protected WebResource visitExternalResource(Locator location, boolean visitNew) {
@@ -224,7 +230,7 @@ public class Bee {
 				status = ResourceStatus.CACHE;
 			} else {
 				resource = this.downloader.download(location);
-				addRetrieved(resource);
+				addRetrieved(location, resource);
 				status = ResourceStatus.SUCCESS;
 			}
 			return resource;
@@ -236,8 +242,8 @@ public class Bee {
 		}
 	}
 
-	protected void storeResource(WebResource resource, List<WebResource> links, boolean subordinate) {
-		final Locator location = resource.getFinalLocation();
+	protected void storeResource(WebResource resource, Map<Locator, ResourceMetadata> links, boolean subordinate) {
+		final Locator location = resource.getMetadata().getLocation();
 		ResourceStatus status = null;
 		try {
 			if (hasStored(location)) {
@@ -254,7 +260,6 @@ public class Bee {
 			if (status == null) {
 				log.debug("xxx");
 			}
-			resource.setContent(null);
 			notifyResourceEvent(location, subordinate, ResourceOperation.STORE, status);
 		}
 	}
@@ -280,11 +285,9 @@ public class Bee {
 		return this.retrieved.get(location);
 	}
 
-	protected void addRetrieved(WebResource resource) {
-		this.retrieved.put(resource.getLocation(), resource);
-		if (resource.isRedirected()) {
-			this.retrieved.put(resource.getRedirectLocation(), resource);
-		}
+	protected void addRetrieved(Locator location, WebResource resource) {
+		this.retrieved.put(location, resource);
+		this.retrieved.put(resource.getMetadata().getLocation(), resource);
 	}
 	
 	protected void notifyResourceEvent(Locator location, boolean subordinate, ResourceOperation operation, ResourceStatus status) {

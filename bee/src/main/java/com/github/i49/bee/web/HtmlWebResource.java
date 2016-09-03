@@ -18,22 +18,16 @@ import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
-public class HtmlResourceContent implements ResourceContent, LinkSource {
+public class HtmlWebResource extends WebResource implements LinkSource {
 
-	private static final Log log = LogFactory.getLog(HtmlResourceContent.class);
+	private static final Log log = LogFactory.getLog(HtmlWebResource.class);
 
-	private final Locator baseLocation;
 	private final Document document;
 
-	protected HtmlResourceContent(Locator baseLocation, Document document) {
-		this.baseLocation = baseLocation;
-		this.document = document;
-	}
-	
 	public Document getDocument() {
 		return document;
 	}
-
+	
 	@Override
 	public byte[] getBytes(ResourceSerializer serializer) {
 		return serializer.writeHtmlDocument(getDocument());
@@ -130,10 +124,11 @@ public class HtmlResourceContent implements ResourceContent, LinkSource {
 
 	protected Locator resolve(String value) {
 		value = value.trim();
+		Locator base = getMetadata().getLocation();
 		if (value.isEmpty() || value.equals("#")) {
-			return getBase();
+			return base;
 		}
-		return getBase().resolve(value);
+		return base.resolve(value);
 	}
 
 	protected void rewriteLinks(String element, String attribute, Map<Locator, Locator> map) {
@@ -172,15 +167,16 @@ public class HtmlResourceContent implements ResourceContent, LinkSource {
 		return newValue;
 	}
 	
-	protected Locator getBase() {
-		return baseLocation;
-	}
-	
-	public static HtmlResourceContent create(Locator baseLocation, InputStream stream, String encoding) throws SAXException, IOException {
+	public static HtmlWebResource create(ResourceMetadata metadata, InputStream stream, String encoding) throws SAXException, IOException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		InputSource source = new InputSource(stream);
 		source.setEncoding(encoding);
 		Document document = builder.parse(source);
-		return new HtmlResourceContent(baseLocation, document);
+		return new HtmlWebResource(metadata, document);
+	}
+
+	protected HtmlWebResource(ResourceMetadata metadata, Document document) {
+		super(metadata);
+		this.document = document;
 	}
 }
