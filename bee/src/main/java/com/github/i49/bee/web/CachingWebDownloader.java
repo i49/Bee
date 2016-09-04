@@ -6,51 +6,65 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.github.i49.bee.hives.DefaultResourceSerializer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-public class CachingWebDownloader implements WebDownloader {
-
-	private final WebDownloader downloader;
-	private final Path pathToCache;
-
-	private final Map<Locator, CacheEntry> entries = new HashMap<>(); 
-	private final ResourceSerializer serializer = new DefaultResourceSerializer();
+public class CachingWebDownloader extends BasicWebDownloader {
 	
-	public CachingWebDownloader(WebDownloader downloader, Path pathToCache) {
-		this.downloader = downloader;
+	private static final Log log = LogFactory.getLog(CachingWebDownloader.class);
+
+	private final Path pathToCache;
+	private final Map<Locator, CacheEntry> entries = new HashMap<>(); 
+	
+	public CachingWebDownloader(Path pathToCache) {
+		super();
 		this.pathToCache = pathToCache;
 	}
 	
 	@Override
 	public void close() throws Exception {
-		downloader.close();
+		super.close();
 	}
 
 	@Override
 	public WebResource download(Locator location) throws Exception {
-		WebResource resource = loadFromCache(location);
+		WebResource resource = restoreResource(location);
 		if (resource == null) {
-			resource = downloader.download(location);
-			if (resource != null) {
-				storeToCache(resource);
-			}
+			resource = super.download(location);
 		}
 		return resource;
 	}
+
+	@Override
+	protected WebResource createResource(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws Exception {
+		WebResource resource = super.createResource(initialLocation, metadata, content);
+		storeToCache(initialLocation, metadata, content);
+		return resource;
+	}
 	
-	private WebResource loadFromCache(Locator location) {
-		CacheEntry entry = this.entries.get(location);
+	private WebResource restoreResource(Locator location) throws Exception {
+		CacheEntry entry = entries.get(location);
 		if (entry == null) {
 			return null;
 		}
-		return null;
+		byte[] content = Files.readAllBytes(entry.getLocalPath());
+		WebResource resource = super.createResource(location, entry.getMetadata(), content);
+		log.debug("Restored from local cache: " + location);
+		return resource;
 	}
-
-	private void storeToCache(WebResource resource) throws IOException {
+	
+	private void storeToCache(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws IOException {
 		Files.createDirectories(pathToCache);
-		Path localPath = Files.createTempFile(this.pathToCache, "", "");
-		CacheEntry entry = new CacheEntry(resource.getMetadata(), localPath);
-		this.entries.put(entry.getMetadata().getLocation(), entry);
+		CacheEntry entry = entries.get(metadata.getLocation());
+		if (entry == null) {
+			Path localPath = Files.createTempFile(this.pathToCache, "", "");
+			entry = new CacheEntry(metadata, localPath);
+		}
+		Files.write(entry.getLocalPath(), content);
+		this.entries.put(metadata.getLocation(), entry);
+		if (!initialLocation.equals(metadata.getLocation())) {
+			this.entries.put(initialLocation, entry);
+		}
 	}
 	
 	private static class CacheEntry {

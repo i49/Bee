@@ -23,7 +23,6 @@ import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
-import com.github.i49.bee.web.BasicWebDownloader;
 import com.github.i49.bee.web.CachingWebDownloader;
 import com.github.i49.bee.web.WebResource;
 
@@ -43,7 +42,6 @@ public class Bee {
 	private final LinkedList<Task> tasks = new LinkedList<>();
 
 	private ResourceRegistry registry;
-	private final Map<Locator, WebResource> retrieved = new HashMap<>();
 	private final Set<Locator> done = new HashSet<>();
 	private final Set<Locator> stored = new HashSet<>();
 	
@@ -85,7 +83,6 @@ public class Bee {
 		}
 		this.hive.open();
 		this.tasks.clear();
-		this.retrieved.clear();
 		this.registry = new ResourceRegistry();
 	}
 	
@@ -191,15 +188,16 @@ public class Bee {
 	
 	protected ResourceMetadata visitDependency(Locator location) {
 		if (canVisit(location)) {
-			ResourceRegistry.Entry entry = registry.find(location);
-			if (entry != null) {
+			if (hasDone(location)) {
+				ResourceRegistry.Entry entry = registry.find(location);
 				return entry.getMetadata();
+			} else {
+				WebResource resource = retrieveResource(location, true);
+				if (resource != null) {
+					storeResource(resource, null, true);
+				}
+				return resource.getMetadata();
 			}
-			WebResource resource = retrieveResource(location, true);
-			if (resource != null) {
-				storeResource(resource, null, true);
-			}
-			return resource.getMetadata();
 		} else {
 			return null;
 		}
@@ -208,21 +206,25 @@ public class Bee {
 	protected Map<Locator, ResourceMetadata> searchNeighbors(LinkProvidingResource resource, boolean visitNew) {
 		Map<Locator, ResourceMetadata> neighbors = new LinkedHashMap<>();
 		for (Link link: resource.getExternalLinks()) {
-			WebResource neighbor = visitExternalResource(link.getLocation(), visitNew);
+			ResourceMetadata neighbor = searchNeighbor(link.getLocation(), visitNew);
 			if (neighbor != null) {
-				neighbors.put(link.getLocation(), neighbor.getMetadata());
+				neighbors.put(link.getLocation(), neighbor);
 			}
 		}
 		return neighbors;
 	}
 	
-	protected WebResource visitExternalResource(Locator location, boolean visitNew) {
+	protected ResourceMetadata searchNeighbor(Locator location, boolean visitNew) {
 		if (canVisit(location)) {
-			WebResource child = getRetrieved(location);
-			if (child == null && visitNew) {
-				child = retrieveResource(location, true);
+			ResourceRegistry.Entry entry = registry.find(location);
+			if (entry != null) {
+				return entry.getMetadata();
+			} else if (visitNew) {
+				WebResource resource = retrieveResource(location, true);
+				return resource.getMetadata();
+			} else {
+				return null;
 			}
-			return child;
 		} else {
 			return null;
 		}
@@ -231,15 +233,9 @@ public class Bee {
 	protected WebResource retrieveResource(Locator location, boolean subordinate) {
 		ResourceStatus status = null;
 		try {
-			WebResource resource = getRetrieved(location);
-			if (resource != null) {
-				status = ResourceStatus.CACHE;
-			} else {
-				resource = this.downloader.download(location);
-				addRetrieved(location, resource);
-				addToRegistry(location, resource);
-				status = ResourceStatus.SUCCESS;
-			}
+			WebResource resource =  this.downloader.download(location);
+			addToRegistry(location, resource);
+			status = ResourceStatus.SUCCESS;
 			return resource;
 		} catch (Exception e) {
 			status = ResourceStatus.FAIL;
@@ -288,15 +284,6 @@ public class Bee {
 		return this.stored.contains(location);
 	}
 
-	protected WebResource getRetrieved(Locator location) {
-		return this.retrieved.get(location);
-	}
-
-	protected void addRetrieved(Locator location, WebResource resource) {
-		this.retrieved.put(location, resource);
-		this.retrieved.put(resource.getMetadata().getLocation(), resource);
-	}
-	
 	protected void addToRegistry(Locator location, WebResource resource) {
 		this.registry.register(location, resource.getMetadata());
 	}
@@ -324,7 +311,7 @@ public class Bee {
 	
 	protected WebDownloader createWebDownloader(Hive hive) {
 		Path pathToCache = Paths.get(hive.getBasePath().toString() + ".cache");
-		return new BasicWebDownloader();
+		return new CachingWebDownloader(pathToCache);
 	}
 	
 	protected void addDefaultEventListeners() {

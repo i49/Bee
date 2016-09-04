@@ -31,7 +31,7 @@ public class BasicWebDownloader implements WebDownloader {
 	}
 	
 	@Override
-	public void close() throws IOException {
+	public void close() throws Exception {
 		this.httpClient.close();
 		log.debug("HTTP client was gracefully closed.");
 	}
@@ -73,10 +73,10 @@ public class BasicWebDownloader implements WebDownloader {
 		try (InputStream stream = entity.getContent()) {
 			content = readContent(stream, metadata.getContentLength());
 		}
-		return createResource(metadata, content);
+		return createResource(initialLocation, metadata, content);
 	}
 	
-	protected WebResource createResource(ResourceMetadata metadata, byte[] content) throws Exception {
+	protected WebResource createResource(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws Exception {
 		final MediaType mediaType = metadata.getMediaType();
 		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
 			return HtmlWebResource.create(metadata, content, DEFAULT_ENCODING);
