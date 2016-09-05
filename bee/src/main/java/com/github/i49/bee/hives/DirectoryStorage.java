@@ -9,6 +9,8 @@ import java.nio.file.attribute.FileTime;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.github.i49.bee.common.Directories;
+
 public class DirectoryStorage implements Storage {
 	
 	private static final Log log = LogFactory.getLog(DirectoryStorage.class);
@@ -19,8 +21,13 @@ public class DirectoryStorage implements Storage {
 	}
 	
 	@Override
-	public void open(Path path) throws IOException {
+	public void open(Path path, boolean clean) throws IOException {
 		this.root = path;
+		if (Files.exists(path) && clean) { 
+			log.debug("Cleaning output directory: " + path);
+			Directories.remove(this.root);
+		}
+		log.debug("Creating output directory: " + path);
 		Files.createDirectories(this.root);
 	}
 
@@ -28,6 +35,11 @@ public class DirectoryStorage implements Storage {
 	public void close() throws IOException {
 	}
 
+	@Override
+	public boolean isDirectory() {
+		return true;
+	}
+	
 	@Override
 	public void saveAt(String path, byte[] content, FileTime lastModified) throws IOException {
 		Path fullpath = this.root.resolve(path.substring(1)).toAbsolutePath();

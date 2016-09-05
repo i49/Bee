@@ -13,6 +13,10 @@ public interface Hive {
 	Path getBasePath();
 	
 	void setBasePath(Path basePath);
+
+	Storage getStorage();
+	
+	void setStorage(Storage storage);
 	
 	void open() throws IOException;
 	

@@ -2,12 +2,15 @@ package com.github.i49.bee.web;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import com.github.i49.bee.common.Directories;
 
 public class CachingWebDownloader extends BasicWebDownloader {
 	
@@ -16,14 +19,17 @@ public class CachingWebDownloader extends BasicWebDownloader {
 	private final Path pathToCache;
 	private final Map<Locator, CacheEntry> entries = new HashMap<>(); 
 	
-	public CachingWebDownloader(Path pathToCache) {
+	public CachingWebDownloader(Path pathToCache) throws IOException {
 		super();
-		this.pathToCache = pathToCache;
+		this.pathToCache = pathToCache.toAbsolutePath();
+		createCacheDirectory(this.pathToCache);
 	}
 	
 	@Override
 	public void close() throws Exception {
 		super.close();
+		log.debug("Deleting cache directory: " + pathToCache);
+		Directories.remove(pathToCache);
 	}
 
 	@Override
@@ -40,6 +46,19 @@ public class CachingWebDownloader extends BasicWebDownloader {
 		WebResource resource = super.createResource(initialLocation, metadata, content);
 		storeToCache(initialLocation, metadata, content);
 		return resource;
+	}
+	
+	private void createCacheDirectory(Path pathToCache) throws IOException {
+		if (Files.exists(pathToCache)) {
+			log.debug("Deleting old cache directory: " + pathToCache);
+			if (Files.isDirectory(pathToCache)) {
+				Directories.remove(pathToCache);
+			} else {
+				throw new NotDirectoryException(pathToCache + " is not directory.");
+			}
+		}
+		log.debug("Creating cache directory: " + pathToCache);
+		Files.createDirectories(pathToCache);
 	}
 	
 	private WebResource restoreResource(Locator location) throws Exception {

@@ -18,12 +18,14 @@ public abstract class AbstractHive implements Hive {
 	private static final String DEFAULT_BASE_PATH = "hive";
 	
 	private Path basePath;
+	private boolean clean;
 	private Layout layout;
 	private Storage storage;
 	private ResourceSerializer serializer = new DefaultResourceSerializer();
 
 	protected AbstractHive() {
-		this.basePath = Paths.get(DEFAULT_BASE_PATH);
+		this.basePath = Paths.get(DEFAULT_BASE_PATH).toAbsolutePath();
+		this.clean = true;
 	}
 
 	@Override
@@ -33,7 +35,17 @@ public abstract class AbstractHive implements Hive {
 
 	@Override
 	public void setBasePath(Path basePath) {
-		this.basePath = basePath;
+		this.basePath = basePath.toAbsolutePath();
+	}
+	
+	@Override
+	public Storage getStorage() {
+		return storage;
+	}
+	
+	@Override
+	public void setStorage(Storage storage) {
+		this.storage = storage;
 	}
 	
 	@Override
@@ -44,7 +56,7 @@ public abstract class AbstractHive implements Hive {
 		if (this.storage == null) {
 			this.storage = createDefaultStorage();
 		}
-		this.storage.open(this.basePath);
+		this.storage.open(this.basePath, this.clean);
 	}
 
 	@Override

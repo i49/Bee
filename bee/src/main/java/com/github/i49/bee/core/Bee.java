@@ -18,6 +18,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
+import com.github.i49.bee.hives.Storage;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
@@ -309,9 +310,18 @@ public class Bee {
 		return new DefaultHive();
 	}
 	
-	protected WebDownloader createWebDownloader(Hive hive) {
-		Path pathToCache = Paths.get(hive.getBasePath().toString() + ".cache");
+	protected WebDownloader createWebDownloader(Hive hive) throws IOException {
+		Path pathToCache = getCacheDirectoryForHive(hive);
 		return new CachingWebDownloader(pathToCache);
+	}
+	
+	private static Path getCacheDirectoryForHive(Hive hive) {
+		Storage storage = hive.getStorage();
+		if (storage.isDirectory()) {
+			return hive.getBasePath().resolve(".bee");
+		} else {
+			return Paths.get(hive.getBasePath().toString() + ".bee");
+		}
 	}
 	
 	protected void addDefaultEventListeners() {
