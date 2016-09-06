@@ -86,22 +86,16 @@ public class BasicWebDownloader implements WebDownloader {
 	}
 	
 	private static byte[] readContent(InputStream in, long length) throws IOException {
-		if (length >= 0) {
-			byte[] content = new byte[(int)length];
-			in.read(content);
-			return content;
-		} else {
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			byte[] buffer = new byte[64 * 1024];
-			for (;;) {
-				int len = in.read(buffer);
-				if (len < 0) {
-					break;
-				}
-				out.write(buffer, 0, len);
+		ByteArrayOutputStream out = (length >= 0) ? new ByteArrayOutputStream((int)length) : new ByteArrayOutputStream();
+		byte[] buffer = new byte[64 * 1024];
+		for (;;) {
+			int len = in.read(buffer);
+			if (len < 0) {
+				break;
 			}
-			return out.toByteArray();
+			out.write(buffer, 0, len);
 		}
+		return out.toByteArray();
 	}
 	
 	private static Locator getFinalLocation(Locator initialLocation, HttpClientContext context) {
