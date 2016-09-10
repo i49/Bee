@@ -8,20 +8,16 @@ public class DefaultReporter implements BeeEventListener {
 	private static final Log log = LogFactory.getLog(DefaultReporter.class);
 
 	@Override
-	public void handleResourceEvent(ResourceEvent e) {
+	public void handleTaskEvent(Task task) {
 		StringBuilder builder = new StringBuilder();
-		if (e.isSubordinate()) {
+		int level = task.getLevel();
+		while (level-- > 0) {
 			builder.append("  ");
 		}
-		if (e.getEntryNo() >= 0) {
-			builder.append("#").append(e.getEntryNo());
-		} else {
-			builder.append("#-");
-		}
-		builder.append("@").append(e.getDistance());
-		builder.append(" ").append(e.getOperation());
-		builder.append("(").append(e.getStatus()).append(")");
-		builder.append(" ").append(e.getLocation());
+		builder.append("@").append(task.getDistance());
+		builder.append(" ").append(task.getPhase());
+		builder.append("(").append("SUCCESS").append(")");
+		builder.append(" ").append(task.getLocation());
 		log.info(builder.toString());
 	}
 }

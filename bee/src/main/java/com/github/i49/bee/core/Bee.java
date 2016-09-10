@@ -49,7 +49,6 @@ public class Bee {
 	private final List<BeeEventListener> listeners = new ArrayList<>();
 	
 	private Seed currentSeed;
-	private int currentDistance; 
 	
 	public Bee() {
 		addDefaultEventListeners();
@@ -112,11 +111,10 @@ public class Bee {
 	protected void prepareBeforeTrip(Seed seed) {
 		this.done.clear();
 		this.currentSeed = seed;
-		this.currentDistance = 0;
 		this.tasks.clear();
 		Locator location = Locator.parse(seed.getLocation());
 		if (location != null) {
-			this.tasks.add(new Task(location));
+			this.tasks.add(new Task(location, 0));
 		}
 	}
 	
@@ -135,12 +133,12 @@ public class Bee {
 	}
 	
 	protected Collection<ResourceMetadata> doTask(Task task) {
-		this.currentDistance = task.getDistance();
-		final boolean visitNew = (currentDistance < currentSeed.getDistanceLimit());
+		final int distance = task.getDistance();
+		final boolean visitNew = (distance < currentSeed.getDistanceLimit());
 		if (hasDone(task.getLocation())) {
 			return null;
 		} else {
-			return visit(task.getLocation(), visitNew);
+			return visit(task, visitNew);
 		}
 	}
 	
@@ -152,62 +150,64 @@ public class Bee {
 		}
 	}
 	
-	protected Collection<ResourceMetadata> visit(Locator location, boolean visitNew) {
+	protected Collection<ResourceMetadata> visit(Task task, boolean visitNew) {
 		Collection<ResourceMetadata> links = null;
-		WebResource resource = retrieveResource(location, false);
+		retrieveResource(task);
+		WebResource resource = task.getResource();
 		if (resource == null) {
 			return null;
 		}
 		if (resource instanceof LinkProvidingResource) {
-			links = parseLinkProvidingResource((LinkProvidingResource)resource, visitNew);
+			links = parseLinkProvidingResource(task, (LinkProvidingResource)resource, visitNew);
 		} else {
-			storeResource(resource, null, false);
+			storeResource(task, null, false);
 		}
 		return links;
 	}
 	
-	protected Collection<ResourceMetadata> parseLinkProvidingResource(LinkProvidingResource resource, boolean visitNew) {
-		Map<Locator, ResourceMetadata> depends = visitDependencies(resource);
-		Map<Locator, ResourceMetadata> neighbors = searchNeighbors(resource, visitNew);
+	protected Collection<ResourceMetadata> parseLinkProvidingResource(Task task, LinkProvidingResource resource, boolean visitNew) {
+		Map<Locator, ResourceMetadata> depends = visitDependencies(task, resource);
+		Map<Locator, ResourceMetadata> neighbors = searchNeighbors(task, resource, visitNew);
 		Map<Locator, ResourceMetadata> all = new HashMap<>();
 		all.putAll(depends);
 		all.putAll(neighbors);
-		storeResource(resource, all, false);
+		storeResource(task, all, false);
 		return neighbors.values();
 	}
 	
-	protected Map<Locator, ResourceMetadata> visitDependencies(LinkProvidingResource resource) {
+	protected Map<Locator, ResourceMetadata> visitDependencies(Task task, LinkProvidingResource resource) {
 		Map<Locator, ResourceMetadata> depends = new LinkedHashMap<>();
 		for (Link link: resource.getDependencyLinks()) {
-			ResourceMetadata metadata = visitDependency(link.getLocation());
+			Task subtask = task.createSubtask(link.getLocation());
+			ResourceMetadata metadata = visitDependency(subtask);
 			if (metadata != null) {
-				depends.put(link.getLocation(), metadata);
+				depends.put(task.getLocation(), metadata);
 			}
 		}
 		return depends;
 	}
 	
-	protected ResourceMetadata visitDependency(Locator location) {
+	protected ResourceMetadata visitDependency(Task task) {
+		Locator location = task.getLocation();
 		if (canVisit(location)) {
 			if (hasDone(location)) {
 				ResourceRegistry.Entry entry = registry.find(location);
 				return entry.getMetadata();
 			} else {
-				WebResource resource = retrieveResource(location, true);
-				if (resource != null) {
-					storeResource(resource, null, true);
-				}
-				return resource.getMetadata();
+				retrieveResource(task);
+				storeResource(task, null, true);
+				return task.getResource().getMetadata();
 			}
 		} else {
 			return null;
 		}
 	}
 	
-	protected Map<Locator, ResourceMetadata> searchNeighbors(LinkProvidingResource resource, boolean visitNew) {
+	protected Map<Locator, ResourceMetadata> searchNeighbors(Task task, LinkProvidingResource resource, boolean visitNew) {
 		Map<Locator, ResourceMetadata> neighbors = new LinkedHashMap<>();
 		for (Link link: resource.getExternalLinks()) {
-			ResourceMetadata neighbor = searchNeighbor(link.getLocation(), visitNew);
+			Task subtask = task.createSubtask(link.getLocation());
+			ResourceMetadata neighbor = searchNeighbor(subtask, visitNew);
 			if (neighbor != null) {
 				neighbors.put(link.getLocation(), neighbor);
 			}
@@ -215,14 +215,15 @@ public class Bee {
 		return neighbors;
 	}
 	
-	protected ResourceMetadata searchNeighbor(Locator location, boolean visitNew) {
+	protected ResourceMetadata searchNeighbor(Task task, boolean visitNew) {
+		Locator location = task.getLocation();
 		if (canVisit(location)) {
 			ResourceRegistry.Entry entry = registry.find(location);
 			if (entry != null) {
 				return entry.getMetadata();
 			} else if (visitNew) {
-				WebResource resource = retrieveResource(location, true);
-				return resource.getMetadata();
+				retrieveResource(task);
+				return task.getResource().getMetadata();
 			} else {
 				return null;
 			}
@@ -231,22 +232,22 @@ public class Bee {
 		}
 	}
 	
-	protected WebResource retrieveResource(Locator location, boolean subordinate) {
-		ResourceStatus status = null;
+	protected void retrieveResource(Task task) {
 		try {
+			Locator location = task.getLocation();
 			WebResource resource =  this.downloader.download(location);
 			addToRegistry(location, resource);
-			status = ResourceStatus.SUCCESS;
-			return resource;
+			task.setResource(resource);
+			notifyTaskEvent(task, TaskPhase.GET);
 		} catch (Exception e) {
-			status = ResourceStatus.FAIL;
-			return null;
-		} finally {
-			notifyResourceEvent(location, subordinate, ResourceOperation.GET, status);
 		}
 	}
 
-	protected void storeResource(WebResource resource, Map<Locator, ResourceMetadata> links, boolean subordinate) {
+	protected void storeResource(Task task, Map<Locator, ResourceMetadata> links, boolean subordinate) {
+		WebResource resource = task.getResource();	
+		if (resource == null) {
+			return;
+		}
 		final Locator location = resource.getMetadata().getLocation();
 		ResourceStatus status = null;
 		try {
@@ -264,7 +265,7 @@ public class Bee {
 			if (status == null) {
 				log.debug("xxx");
 			}
-			notifyResourceEvent(location, subordinate, ResourceOperation.STORE, status);
+			notifyTaskEvent(task, TaskPhase.STORE);
 		}
 	}
 	
@@ -289,20 +290,10 @@ public class Bee {
 		this.registry.register(location, resource.getMetadata());
 	}
 	
-	protected void notifyResourceEvent(Locator location, boolean subordinate, ResourceOperation operation, ResourceStatus status) {
-		ResourceRegistry.Entry entry = this.registry.find(location);
-		final int distance = subordinate ? this.currentDistance + 1 : this.currentDistance;
-		ResourceEvent e = new ResourceEvent(location, operation);
-		e.setDistance(distance);
-		e.setSubordinate(subordinate);
-		e.setEntryNo((entry != null) ? entry.getEntryNo() : -1); 
-		e.setStatus(status);
-		fireResourceEvent(e);
-	}
-	
-	protected void fireResourceEvent(ResourceEvent e) {
+	protected void notifyTaskEvent(Task task, TaskPhase phase) {
+		task.setPhase(phase);
 		for (BeeEventListener listener : this.listeners) {
-			listener.handleResourceEvent(e);
+			listener.handleTaskEvent(task);
 		}
 	}
 	

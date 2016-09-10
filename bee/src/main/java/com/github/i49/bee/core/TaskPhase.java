@@ -1,6 +1,7 @@
 package com.github.i49.bee.core;
 
-public enum ResourceOperation {
+public enum TaskPhase {
+	INITIAL,
 	GET,
 	STORE
 }
