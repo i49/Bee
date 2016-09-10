@@ -31,23 +31,42 @@ public class BasicWebDownloader implements WebDownloader {
 	}
 	
 	@Override
-	public void close() throws Exception {
-		this.httpClient.close();
-		log.debug("HTTP client was gracefully closed.");
+	public void close() {
+		try {
+			this.httpClient.close();
+			log.debug("HTTP client was gracefully closed.");
+		} catch (IOException e) {
+			// Ignores exception
+			log.debug("Failed to close HTTP client: " + e.getMessage());
+		}
 	}
 
 	@Override
-	public WebResource download(Locator location) throws Exception {
+	public WebResource download(Locator location) throws WebException {
 		HttpGet request = new HttpGet(location.toURI());
 		HttpClientContext context = new HttpClientContext();
 		try (CloseableHttpResponse response = this.httpClient.execute(request, context)) {
-			final int code = response.getStatusLine().getStatusCode();
-			if (code == HttpStatus.SC_OK) {
+			final int statusCode = response.getStatusLine().getStatusCode();
+			if (statusCode == HttpStatus.SC_OK) {
 				return createResource(location, context, response);
 			} else {
-				throw new IOException("Failed to get " + location.toString() + " (" + code + ")");
+				throw new HttpStatusException(location, statusCode);
 			}
+		} catch (IOException e) {
+			throw new TransferException(location, e);
 		}
+	}
+	
+	protected WebResource createResource(Locator initialLocation, HttpClientContext context, HttpResponse response) throws WebException {
+		ResourceMetadata metadata = createMetadata(initialLocation, context, response);
+		final HttpEntity entity = response.getEntity();
+		byte[] content = null;
+		try (InputStream stream = entity.getContent()) {
+			content = readContent(stream, metadata.getContentLength());
+		} catch (IOException e) {
+			throw new TransferException(metadata.getLocation(), e);
+		}
+		return createResource(initialLocation, metadata, content);
 	}
 	
 	protected ResourceMetadata createMetadata(Locator initialLocation, HttpClientContext context, HttpResponse response) throws UnsupportedMediaException {
@@ -66,17 +85,7 @@ public class BasicWebDownloader implements WebDownloader {
 		return builder.build();
 	}
 	
-	protected WebResource createResource(Locator initialLocation, HttpClientContext context, HttpResponse response) throws Exception {
-		ResourceMetadata metadata = createMetadata(initialLocation, context, response);
-		final HttpEntity entity = response.getEntity();
-		byte[] content = null;
-		try (InputStream stream = entity.getContent()) {
-			content = readContent(stream, metadata.getContentLength());
-		}
-		return createResource(initialLocation, metadata, content);
-	}
-	
-	protected WebResource createResource(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws Exception {
+	protected WebResource createResource(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws WebException {
 		final MediaType mediaType = metadata.getMediaType();
 		if (mediaType == MediaType.TEXT_HTML || mediaType == MediaType.APPLICATION_XHTML_XML) {
 			return HtmlWebResource.create(metadata, content, DEFAULT_ENCODING);
@@ -117,7 +126,7 @@ public class BasicWebDownloader implements WebDownloader {
 		String[] tokens = contentType.split(";");
 		MediaType mediaType = MediaType.of(tokens[0]);
 		if (mediaType == null) {
-			throw new UnsupportedMediaException("Unsupported media type: " + tokens[0]);
+			throw new UnsupportedMediaException(tokens[0]);
 		}
 		return mediaType;
 	}

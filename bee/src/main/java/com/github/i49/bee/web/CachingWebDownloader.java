@@ -17,23 +17,29 @@ public class CachingWebDownloader extends BasicWebDownloader {
 	private static final Log log = LogFactory.getLog(CachingWebDownloader.class);
 
 	private final Path pathToCache;
-	private final Map<Locator, CacheEntry> entries = new HashMap<>(); 
+	private final Map<Locator, CacheEntry> entries = new HashMap<>();
+	private boolean firstCache;
 	
-	public CachingWebDownloader(Path pathToCache) throws IOException {
+	public CachingWebDownloader(Path pathToCache) {
 		super();
 		this.pathToCache = pathToCache.toAbsolutePath();
-		createCacheDirectory(this.pathToCache);
+		this.firstCache = true;
 	}
 	
 	@Override
-	public void close() throws Exception {
+	public void close()  {
 		super.close();
-		log.debug("Deleting cache directory: " + pathToCache);
-		Directories.remove(pathToCache);
+		try {
+			Directories.remove(pathToCache);
+			log.debug("Deleted cache directory: " + pathToCache);
+		} catch (IOException e) {
+			// Ignores exception
+			log.debug("Failed to delete cache directory: " + pathToCache);
+		}
 	}
 
 	@Override
-	public WebResource download(Locator location) throws Exception {
+	public WebResource download(Locator location) throws WebException {
 		WebResource resource = restoreResource(location);
 		if (resource == null) {
 			resource = super.download(location);
@@ -42,10 +48,50 @@ public class CachingWebDownloader extends BasicWebDownloader {
 	}
 
 	@Override
-	protected WebResource createResource(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws Exception {
+	protected WebResource createResource(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws WebException {
 		WebResource resource = super.createResource(initialLocation, metadata, content);
-		storeToCache(initialLocation, metadata, content);
+		try {
+			storeToCache(initialLocation, metadata, content);
+		} catch (IOException e) {
+			throw new CacheWriteException(metadata.getLocation(), e);
+		}
 		return resource;
+	}
+	
+	private WebResource restoreResource(Locator location) throws WebException {
+		CacheEntry entry = entries.get(location);
+		if (entry == null) {
+			return null;
+		}
+		final byte[] content = readContentFromCache(location, entry.getLocalPath());
+		WebResource resource = super.createResource(location, entry.getMetadata(), content);
+		log.debug("Restored from local cache: " + location);
+		return resource;
+	}
+	
+	private byte[] readContentFromCache(Locator location, Path localPath) throws CacheReadException {
+		try {
+			return Files.readAllBytes(localPath);
+		} catch (IOException e) {
+			throw new CacheReadException(location, localPath, e);
+		}
+	}
+	
+	private void storeToCache(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws IOException {
+		if (this.firstCache) {
+			createCacheDirectory(this.pathToCache);
+			this.firstCache = false;
+		}
+		CacheEntry entry = entries.get(metadata.getLocation());
+		if (entry == null) {
+			Path localPath = Files.createTempFile(this.pathToCache, "", "");
+			entry = new CacheEntry(metadata, localPath);
+		}
+		Files.write(entry.getLocalPath(), content);
+		this.entries.put(metadata.getLocation(), entry);
+		if (!initialLocation.equals(metadata.getLocation())) {
+			this.entries.put(initialLocation, entry);
+		}
 	}
 	
 	private void createCacheDirectory(Path pathToCache) throws IOException {
@@ -59,31 +105,6 @@ public class CachingWebDownloader extends BasicWebDownloader {
 		}
 		log.debug("Creating cache directory: " + pathToCache);
 		Files.createDirectories(pathToCache);
-	}
-	
-	private WebResource restoreResource(Locator location) throws Exception {
-		CacheEntry entry = entries.get(location);
-		if (entry == null) {
-			return null;
-		}
-		byte[] content = Files.readAllBytes(entry.getLocalPath());
-		WebResource resource = super.createResource(location, entry.getMetadata(), content);
-		log.debug("Restored from local cache: " + location);
-		return resource;
-	}
-	
-	private void storeToCache(Locator initialLocation, ResourceMetadata metadata, byte[] content) throws IOException {
-		Files.createDirectories(pathToCache);
-		CacheEntry entry = entries.get(metadata.getLocation());
-		if (entry == null) {
-			Path localPath = Files.createTempFile(this.pathToCache, "", "");
-			entry = new CacheEntry(metadata, localPath);
-		}
-		Files.write(entry.getLocalPath(), content);
-		this.entries.put(metadata.getLocation(), entry);
-		if (!initialLocation.equals(metadata.getLocation())) {
-			this.entries.put(initialLocation, entry);
-		}
 	}
 	
 	private static class CacheEntry {

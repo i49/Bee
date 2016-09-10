@@ -1,7 +1,6 @@
 package com.github.i49.bee.web;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -14,7 +13,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import nu.validator.htmlparser.dom.HtmlDocumentBuilder;
 
@@ -167,13 +165,17 @@ public class HtmlWebResource extends AbstractWebResource implements LinkProvidin
 		return newValue;
 	}
 	
-	public static HtmlWebResource create(ResourceMetadata metadata, byte[] content, String defaultEncoding) throws SAXException, IOException {
+	public static HtmlWebResource create(ResourceMetadata metadata, byte[] content, String defaultEncoding) throws ResourceContentException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		InputSource source = new InputSource(new ByteArrayInputStream(content));
 		String encoding = metadata.getContentEncoding();
 		source.setEncoding((encoding != null) ? encoding : defaultEncoding);
-		Document document = builder.parse(source);
-		return new HtmlWebResource(metadata, document);
+		try {
+			Document document = builder.parse(source);
+			return new HtmlWebResource(metadata, document);
+		} catch (Exception e) {
+			throw new ResourceContentException(metadata.getLocation(), e);
+		}
 	}
 
 	protected HtmlWebResource(ResourceMetadata metadata, Document document) {
