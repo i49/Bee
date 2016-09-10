@@ -24,6 +24,7 @@ import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
+import com.github.i49.bee.web.WebException;
 import com.github.i49.bee.web.CachingWebDownloader;
 import com.github.i49.bee.web.WebResource;
 
@@ -47,8 +48,6 @@ public class Bee {
 	private final Set<Locator> stored = new HashSet<>();
 	
 	private final List<BeeEventListener> listeners = new ArrayList<>();
-	
-	private Seed currentSeed;
 	
 	public Bee() {
 		addDefaultEventListeners();
@@ -104,13 +103,12 @@ public class Bee {
 	
 	protected void makeTrip(Seed seed) {
 		prepareBeforeTrip(seed);
-		doAllTasks();
+		doAllTasks(seed.getDistanceLimit());
 		unprepareAfterTrip();
 	}
 	
 	protected void prepareBeforeTrip(Seed seed) {
 		this.done.clear();
-		this.currentSeed = seed;
 		this.tasks.clear();
 		Locator location = Locator.parse(seed.getLocation());
 		if (location != null) {
@@ -121,20 +119,19 @@ public class Bee {
 	protected void unprepareAfterTrip() {
 	}
 	
-	protected void doAllTasks() {
+	protected void doAllTasks(int distanceLimit) {
 		while (!this.tasks.isEmpty()) {
 			Task task = this.tasks.removeFirst();
-			int distance = task.getDistance();
-			Collection<ResourceMetadata> links = doTask(task);
-			if (links != null && links.size() > 0 && distance < currentSeed.getDistanceLimit()) {
+			final int distance = task.getDistance();
+			final boolean visitNew = (distance < distanceLimit);
+			Collection<ResourceMetadata> links = doTask(task, visitNew);
+			if (links != null && links.size() > 0 && visitNew) {
 				addNewTasks(links, distance + 1);
 			}
 		}
 	}
 	
-	protected Collection<ResourceMetadata> doTask(Task task) {
-		final int distance = task.getDistance();
-		final boolean visitNew = (distance < currentSeed.getDistanceLimit());
+	protected Collection<ResourceMetadata> doTask(Task task, boolean visitNew) {
 		if (hasDone(task.getLocation())) {
 			return null;
 		} else {
@@ -160,7 +157,7 @@ public class Bee {
 		if (resource instanceof LinkProvidingResource) {
 			links = parseLinkProvidingResource(task, (LinkProvidingResource)resource, visitNew);
 		} else {
-			storeResource(task, null, false);
+			storeResource(task, null);
 		}
 		return links;
 	}
@@ -171,7 +168,7 @@ public class Bee {
 		Map<Locator, ResourceMetadata> all = new HashMap<>();
 		all.putAll(depends);
 		all.putAll(neighbors);
-		storeResource(task, all, false);
+		storeResource(task, all);
 		return neighbors.values();
 	}
 	
@@ -195,7 +192,7 @@ public class Bee {
 				return entry.getMetadata();
 			} else {
 				retrieveResource(task);
-				storeResource(task, null, true);
+				storeResource(task, null);
 				return task.getResource().getMetadata();
 			}
 		} else {
@@ -233,39 +230,35 @@ public class Bee {
 	}
 	
 	protected void retrieveResource(Task task) {
+		task.setPhase(TaskPhase.GET);
 		try {
 			Locator location = task.getLocation();
 			WebResource resource =  this.downloader.download(location);
 			addToRegistry(location, resource);
 			task.setResource(resource);
-			notifyTaskEvent(task, TaskPhase.GET);
-		} catch (Exception e) {
+			notifyTaskEvent(task);
+		} catch (WebException e) {
+			notifyTaskFailure(task, e);
 		}
 	}
 
-	protected void storeResource(Task task, Map<Locator, ResourceMetadata> links, boolean subordinate) {
+	protected void storeResource(Task task, Map<Locator, ResourceMetadata> links) {
+		task.setPhase(TaskPhase.STORE);
 		WebResource resource = task.getResource();	
 		if (resource == null) {
 			return;
 		}
 		final Locator location = resource.getMetadata().getLocation();
-		ResourceStatus status = null;
 		try {
 			if (hasStored(location)) {
-				status = ResourceStatus.SKIP;
 			} else {
 				this.hive.store(resource, links);
 				this.done.add(location);
 				this.stored.add(location);
-				status = ResourceStatus.SUCCESS;
+				notifyTaskEvent(task);
 			}
 		} catch (IOException e) {
-			status = ResourceStatus.FAIL;
-		} finally {
-			if (status == null) {
-				log.debug("xxx");
-			}
-			notifyTaskEvent(task, TaskPhase.STORE);
+			notifyTaskFailure(task, e);
 		}
 	}
 	
@@ -290,13 +283,19 @@ public class Bee {
 		this.registry.register(location, resource.getMetadata());
 	}
 	
-	protected void notifyTaskEvent(Task task, TaskPhase phase) {
-		task.setPhase(phase);
+	protected void notifyTaskEvent(Task task) {
 		for (BeeEventListener listener : this.listeners) {
 			listener.handleTaskEvent(task);
 		}
 	}
 	
+	protected void notifyTaskFailure(Task task, Exception cause) {
+		task.setCause(cause);
+		for (BeeEventListener listener : this.listeners) {
+			listener.handleTaskFailure(task);
+		}
+	}
+
 	protected Hive createDefaultHive() {
 		return new DefaultHive();
 	}

@@ -13,6 +13,7 @@ public class Task {
 	private final int level;
 	private TaskPhase phase;
 	private WebResource resource; 
+	private Exception cause;
 	
 	public Task(Locator location, int distance) {
 		this(location, distance, 0);
@@ -57,6 +58,14 @@ public class Task {
 		this.phase = phase;
 	}
 
+	public Exception getCause() {
+		return cause;
+	}
+	
+	public void setCause(Exception cause) {
+		this.cause = cause;
+	}
+	
 	public Task createSubtask(Locator location) {
 		return new Task(location, this.distance + 1, this.level + 1);
 	}
