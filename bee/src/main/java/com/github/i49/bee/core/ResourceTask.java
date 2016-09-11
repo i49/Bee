@@ -6,7 +6,7 @@ import com.github.i49.bee.web.WebResource;
 /**
  * Task to collect web resource.
  */
-public class Task {
+public class ResourceTask {
 
 	private final Locator location;
 	private final int distance;
@@ -16,12 +16,12 @@ public class Task {
 	private ResourceRecord record;
 	private Exception cause;
 	
-	public Task(Locator location, int distance) {
+	public ResourceTask(Locator location, int distance) {
 		this(location, distance, 0);
 		this.phase = ResourceTaskPhase.INITIAL;
 	}
 
-	public Task(Locator location, int distance, int level) {
+	public ResourceTask(Locator location, int distance, int level) {
 		this.location = location;
 		this.distance = distance;
 		this.level = level;
@@ -80,7 +80,7 @@ public class Task {
 		this.cause = cause;
 	}
 	
-	public Task createSubtask(Locator location) {
-		return new Task(location, this.distance + 1, this.level + 1);
+	public ResourceTask createSubtask(Locator location) {
+		return new ResourceTask(location, this.distance + 1, this.level + 1);
 	}
 }

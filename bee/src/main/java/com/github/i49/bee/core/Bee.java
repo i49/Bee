@@ -41,7 +41,7 @@ public class Bee {
 	private WebDownloader downloader;
 	private Hive hive; 
 	
-	private final LinkedList<Task> tasks = new LinkedList<>();
+	private final LinkedList<ResourceTask> tasks = new LinkedList<>();
 
 	private ResourceRegistry registry;
 	private final Set<ResourceRecord> done = new HashSet<>();
@@ -111,7 +111,7 @@ public class Bee {
 		this.tasks.clear();
 		Locator location = Locator.parse(seed.getLocation());
 		if (location != null) {
-			this.tasks.add(new Task(location, 0));
+			this.tasks.add(new ResourceTask(location, 0));
 		}
 	}
 	
@@ -120,7 +120,7 @@ public class Bee {
 	
 	protected void doAllTasks(int distanceLimit) {
 		while (!this.tasks.isEmpty()) {
-			Task task = this.tasks.removeFirst();
+			ResourceTask task = this.tasks.removeFirst();
 			final int distance = task.getDistance();
 			final boolean visitNew = (distance < distanceLimit);
 			Collection<ResourceMetadata> links = doTask(task, visitNew);
@@ -130,7 +130,7 @@ public class Bee {
 		}
 	}
 	
-	protected Collection<ResourceMetadata> doTask(Task task, boolean visitNew) {
+	protected Collection<ResourceMetadata> doTask(ResourceTask task, boolean visitNew) {
 		if (hasDone(task.getLocation())) {
 			return null;
 		} else {
@@ -141,12 +141,12 @@ public class Bee {
 	protected void addNewTasks(Collection<ResourceMetadata> links, int distance) {
 		int pos = 0;
 		for (ResourceMetadata metadata : links) {
-			Task task = new Task(metadata.getLocation(), distance);
+			ResourceTask task = new ResourceTask(metadata.getLocation(), distance);
 			this.tasks.add(pos++, task);
 		}
 	}
 	
-	protected Collection<ResourceMetadata> visit(Task task, boolean visitNew) {
+	protected Collection<ResourceMetadata> visit(ResourceTask task, boolean visitNew) {
 		Collection<ResourceMetadata> links = null;
 		retrieveResource(task);
 		WebResource resource = task.getResource();
@@ -162,7 +162,7 @@ public class Bee {
 		return links;
 	}
 	
-	protected Collection<ResourceMetadata> parseLinkProvidingResource(Task task, LinkProvidingResource resource, boolean visitNew) {
+	protected Collection<ResourceMetadata> parseLinkProvidingResource(ResourceTask task, LinkProvidingResource resource, boolean visitNew) {
 		Map<Locator, ResourceMetadata> depends = visitDependencies(task, resource);
 		Map<Locator, ResourceMetadata> neighbors = searchNeighbors(task, resource, visitNew);
 		Map<Locator, ResourceMetadata> all = new HashMap<>();
@@ -172,10 +172,10 @@ public class Bee {
 		return neighbors.values();
 	}
 	
-	protected Map<Locator, ResourceMetadata> visitDependencies(Task task, LinkProvidingResource resource) {
+	protected Map<Locator, ResourceMetadata> visitDependencies(ResourceTask task, LinkProvidingResource resource) {
 		Map<Locator, ResourceMetadata> depends = new LinkedHashMap<>();
 		for (Link link: resource.getDependencyLinks()) {
-			Task subtask = task.createSubtask(link.getLocation());
+			ResourceTask subtask = task.createSubtask(link.getLocation());
 			ResourceMetadata metadata = visitDependency(subtask);
 			if (metadata != null) {
 				depends.put(task.getLocation(), metadata);
@@ -184,7 +184,7 @@ public class Bee {
 		return depends;
 	}
 	
-	protected ResourceMetadata visitDependency(Task task) {
+	protected ResourceMetadata visitDependency(ResourceTask task) {
 		Locator location = task.getLocation();
 		if (canVisit(location)) {
 			if (hasDone(location)) {
@@ -200,10 +200,10 @@ public class Bee {
 		}
 	}
 	
-	protected Map<Locator, ResourceMetadata> searchNeighbors(Task task, LinkProvidingResource resource, boolean visitNew) {
+	protected Map<Locator, ResourceMetadata> searchNeighbors(ResourceTask task, LinkProvidingResource resource, boolean visitNew) {
 		Map<Locator, ResourceMetadata> neighbors = new LinkedHashMap<>();
 		for (Link link: resource.getExternalLinks()) {
-			Task subtask = task.createSubtask(link.getLocation());
+			ResourceTask subtask = task.createSubtask(link.getLocation());
 			ResourceMetadata neighbor = searchNeighbor(subtask, visitNew);
 			if (neighbor != null) {
 				neighbors.put(link.getLocation(), neighbor);
@@ -212,7 +212,7 @@ public class Bee {
 		return neighbors;
 	}
 	
-	protected ResourceMetadata searchNeighbor(Task task, boolean visitNew) {
+	protected ResourceMetadata searchNeighbor(ResourceTask task, boolean visitNew) {
 		Locator location = task.getLocation();
 		if (canVisit(location)) {
 			ResourceRecord record = registry.find(location);
@@ -229,7 +229,7 @@ public class Bee {
 		}
 	}
 	
-	protected void retrieveResource(Task task) {
+	protected void retrieveResource(ResourceTask task) {
 		task.setPhase(ResourceTaskPhase.GET);
 		try {
 			Locator location = task.getLocation();
@@ -242,7 +242,7 @@ public class Bee {
 		}
 	}
 
-	protected void storeResource(Task task, Map<Locator, ResourceMetadata> links) {
+	protected void storeResource(ResourceTask task, Map<Locator, ResourceMetadata> links) {
 		task.setPhase(ResourceTaskPhase.STORE);
 		WebResource resource = task.getResource();	
 		if (resource == null) {
@@ -288,13 +288,13 @@ public class Bee {
 		return this.registry.register(location, resource.getMetadata());
 	}
 	
-	protected void notifyTaskEvent(Task task) {
+	protected void notifyTaskEvent(ResourceTask task) {
 		for (BeeEventListener listener : this.listeners) {
 			listener.handleTaskEvent(task);
 		}
 	}
 	
-	protected void notifyTaskFailure(Task task, Exception cause) {
+	protected void notifyTaskFailure(ResourceTask task, Exception cause) {
 		task.setCause(cause);
 		for (BeeEventListener listener : this.listeners) {
 			listener.handleTaskFailure(task);

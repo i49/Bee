@@ -11,16 +11,16 @@ public class DefaultReporter implements BeeEventListener {
 	private static final Log log = LogFactory.getLog(DefaultReporter.class);
 
 	@Override
-	public void handleTaskEvent(Task task) {
+	public void handleTaskEvent(ResourceTask task) {
 		reportTask(task, "SUCCESS");
 	}
 
 	@Override
-	public void handleTaskFailure(Task task) {
+	public void handleTaskFailure(ResourceTask task) {
 		reportTask(task, "FAILED");
 	}
 	
-	protected void reportTask(Task task, String status) {
+	protected void reportTask(ResourceTask task, String status) {
 		StringBuilder builder = new StringBuilder();
 		int count = task.getDistance();
 		while (count-- > 0) {

@@ -5,7 +5,7 @@ package com.github.i49.bee.core;
  */
 public interface BeeEventListener {
 
-	void handleTaskEvent(Task task);
+	void handleTaskEvent(ResourceTask task);
 	
-	void handleTaskFailure(Task task);
+	void handleTaskFailure(ResourceTask task);
 }
