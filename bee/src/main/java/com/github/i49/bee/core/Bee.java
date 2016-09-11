@@ -44,8 +44,7 @@ public class Bee {
 	private final LinkedList<Task> tasks = new LinkedList<>();
 
 	private ResourceRegistry registry;
-	private final Set<Locator> done = new HashSet<>();
-	private final Set<Locator> stored = new HashSet<>();
+	private final Set<ResourceRecord> done = new HashSet<>();
 	
 	private final List<BeeEventListener> listeners = new ArrayList<>();
 	
@@ -159,6 +158,7 @@ public class Bee {
 		} else {
 			storeResource(task, null);
 		}
+		done(task.getRecord());
 		return links;
 	}
 	
@@ -188,8 +188,8 @@ public class Bee {
 		Locator location = task.getLocation();
 		if (canVisit(location)) {
 			if (hasDone(location)) {
-				ResourceRegistry.Entry entry = registry.find(location);
-				return entry.getMetadata();
+				ResourceRecord record = registry.find(location);
+				return record.getMetadata();
 			} else {
 				retrieveResource(task);
 				storeResource(task, null);
@@ -215,9 +215,9 @@ public class Bee {
 	protected ResourceMetadata searchNeighbor(Task task, boolean visitNew) {
 		Locator location = task.getLocation();
 		if (canVisit(location)) {
-			ResourceRegistry.Entry entry = registry.find(location);
-			if (entry != null) {
-				return entry.getMetadata();
+			ResourceRecord record = registry.find(location);
+			if (record != null) {
+				return record.getMetadata();
 			} else if (visitNew) {
 				retrieveResource(task);
 				return task.getResource().getMetadata();
@@ -234,8 +234,8 @@ public class Bee {
 		try {
 			Locator location = task.getLocation();
 			WebResource resource =  this.downloader.download(location);
-			addToRegistry(location, resource);
 			task.setResource(resource);
+			task.setRecord(recordResource(location, resource));
 			notifyTaskEvent(task);
 		} catch (WebException e) {
 			notifyTaskFailure(task, e);
@@ -248,15 +248,14 @@ public class Bee {
 		if (resource == null) {
 			return;
 		}
-		final Locator location = resource.getMetadata().getLocation();
+		ResourceRecord record = task.getRecord();
+		if (record.isStored()) {
+			return;
+		}
 		try {
-			if (hasStored(location)) {
-			} else {
-				this.hive.store(resource, links);
-				this.done.add(location);
-				this.stored.add(location);
-				notifyTaskEvent(task);
-			}
+			this.hive.store(resource, links);
+			record.setStored();
+			notifyTaskEvent(task);
 		} catch (IOException e) {
 			notifyTaskFailure(task, e);
 		}
@@ -272,15 +271,21 @@ public class Bee {
 	}
 	
 	protected boolean hasDone(Locator location) {
-		return done.contains(location);
+		ResourceRecord record = this.registry.find(location);
+		if (record == null) {
+			return false;
+		}
+		return this.done.contains(record);
 	}
 	
-	protected boolean hasStored(Locator location) {
-		return this.stored.contains(location);
+	protected void done(ResourceRecord record) {
+		if (record != null) {
+			this.done.add(record);
+		}
 	}
-
-	protected void addToRegistry(Locator location, WebResource resource) {
-		this.registry.register(location, resource.getMetadata());
+	
+	protected ResourceRecord recordResource(Locator location, WebResource resource) {
+		return this.registry.register(location, resource.getMetadata());
 	}
 	
 	protected void notifyTaskEvent(Task task) {

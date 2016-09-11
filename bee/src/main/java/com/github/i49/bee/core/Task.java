@@ -4,7 +4,7 @@ import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebResource;
 
 /**
- * Task to be done by bee.
+ * Task to collect web resource.
  */
 public class Task {
 
@@ -13,6 +13,7 @@ public class Task {
 	private final int level;
 	private TaskPhase phase;
 	private WebResource resource; 
+	private ResourceRecord record;
 	private Exception cause;
 	
 	public Task(Locator location, int distance) {
@@ -41,7 +42,7 @@ public class Task {
 	public int getLevel() {
 		return level;
 	}
-
+	
 	public WebResource getResource() {
 		return resource;
 	}
@@ -50,6 +51,19 @@ public class Task {
 		this.resource = resource;
 	}
 	
+	public ResourceRecord getRecord() {
+		return record;
+	}
+	
+	public int getResourceId() {
+		ResourceRecord record = getRecord();
+		return (record != null) ? record.getId() : -1;
+	}
+	
+	public void setRecord(ResourceRecord record) {
+		this.record = record;
+	}
+
 	public TaskPhase getPhase() {
 		return phase;
 	}

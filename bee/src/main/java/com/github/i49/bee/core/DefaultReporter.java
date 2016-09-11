@@ -30,6 +30,10 @@ public class DefaultReporter implements BeeEventListener {
 		builder.append(" ").append(task.getPhase());
 		builder.append("(").append(status).append(")");
 		builder.append(" ").append(task.getLocation());
+		int id = task.getResourceId();
+		if (id >= 0) {
+			builder.append(" @").append(id);
+		}
 		log.info(builder.toString());
 	}
 }
