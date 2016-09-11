@@ -230,7 +230,7 @@ public class Bee {
 	}
 	
 	protected void retrieveResource(Task task) {
-		task.setPhase(TaskPhase.GET);
+		task.setPhase(ResourceTaskPhase.GET);
 		try {
 			Locator location = task.getLocation();
 			WebResource resource =  this.downloader.download(location);
@@ -243,7 +243,7 @@ public class Bee {
 	}
 
 	protected void storeResource(Task task, Map<Locator, ResourceMetadata> links) {
-		task.setPhase(TaskPhase.STORE);
+		task.setPhase(ResourceTaskPhase.STORE);
 		WebResource resource = task.getResource();	
 		if (resource == null) {
 			return;

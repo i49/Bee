@@ -11,14 +11,14 @@ public class Task {
 	private final Locator location;
 	private final int distance;
 	private final int level;
-	private TaskPhase phase;
+	private ResourceTaskPhase phase;
 	private WebResource resource; 
 	private ResourceRecord record;
 	private Exception cause;
 	
 	public Task(Locator location, int distance) {
 		this(location, distance, 0);
-		this.phase = TaskPhase.INITIAL;
+		this.phase = ResourceTaskPhase.INITIAL;
 	}
 
 	public Task(Locator location, int distance, int level) {
@@ -64,11 +64,11 @@ public class Task {
 		this.record = record;
 	}
 
-	public TaskPhase getPhase() {
+	public ResourceTaskPhase getPhase() {
 		return phase;
 	}
 
-	public void setPhase(TaskPhase phase) {
+	public void setPhase(ResourceTaskPhase phase) {
 		this.phase = phase;
 	}
 
