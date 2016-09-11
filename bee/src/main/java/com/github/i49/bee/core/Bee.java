@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,7 +69,13 @@ public class Bee {
 		log.debug("Bee launched.");
 		try {
 			prepareBeforeAllTrips();
-			makeAllTrips(this.seeds);
+			try (WebDownloader downloader = createWebDownloader(this.hive)) {
+				this.downloader = downloader;
+				RootTask task = createRootTask(this.seeds);
+				task.doTask();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			unprepareAfterAllTrips();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -295,10 +302,18 @@ public class Bee {
 	}
 	
 	protected void notifyTaskFailure(ResourceTask task, Exception cause) {
-		task.setCause(cause);
+		task.setErrorCause(cause);
 		for (BeeEventListener listener : this.listeners) {
 			listener.handleTaskFailure(task);
 		}
+	}
+	
+	protected RootTask createRootTask(List<Seed> seeds) {
+		RootTask root = new RootTask(new BeeContextImpl());
+		for (Seed seed : seeds) {
+			root.addSubtask(new TripTask(seed));
+		}
+		return root;
 	}
 
 	protected Hive createDefaultHive() {
@@ -321,5 +336,35 @@ public class Bee {
 	
 	protected void addDefaultEventListeners() {
 		this.listeners.add(new DefaultReporter());
+	}
+	
+	private class BeeContextImpl implements BeeContext {
+
+		@Override
+		public WebDownloader getDownloader() {
+			return downloader;
+		}
+
+		@Override
+		public Hive getHive() {
+			return hive;
+		}
+
+		@Override
+		public ResourceRegistry getRegistry() {
+			return registry;
+		}
+
+		@Override
+		public boolean allowsToVisit(Locator location) {
+			return canVisit(location);
+		}
+
+		@Override
+		public void notifyEvent(Consumer<BeeEventListener> consumer) {
+			for (BeeEventListener listener : listeners) {
+				consumer.accept(listener);
+			}
+		}
 	}
 }
