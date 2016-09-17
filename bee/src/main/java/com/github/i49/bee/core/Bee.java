@@ -70,8 +70,7 @@ public class Bee {
 		try (WebDownloader downloader = createWebDownloader(this.hive)) {
 			BeeAsVisitor visitor = asVisitor();
 			visitor.downloader = downloader;
-			RootTask task = createRootTask(visitor);
-			task.doTask();
+			createRootTask(visitor).run();
 		}
 	}
 

@@ -77,7 +77,7 @@ public class ResourceTask extends Task {
 	}
 	
 	@Override
-	protected boolean doBeforeSubtasks() {
+	protected boolean runBeforeSubtasks() {
 		if (getVisitor().hasDone(getLocation())) {
 			return false;
 		}
@@ -91,12 +91,12 @@ public class ResourceTask extends Task {
 	}
 
 	@Override
-	protected void doAfterSubtasks() {
+	protected void runAfterSubtasks() {
 		storeResource();
 	}
 
 	@Override
-	protected void doAfterSubtask(Task subtask) {
+	protected void runAfterEachSubtask(Task subtask) {
 		ResourceTask actual = (ResourceTask)subtask;
 		this.links.put(actual.getLocation(), actual.getMetadata());
 		if (subtask instanceof HyperlinkResourceTask) {

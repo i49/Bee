@@ -11,7 +11,7 @@ public class TripTask extends Task {
 	}
 
 	@Override
-	protected boolean doBeforeSubtasks() {
+	protected boolean runBeforeSubtasks() {
 		getVisitor().setCurrentTrip(this.trip);
 		Locator location = Locator.parse(trip.getStartingPoint());
 		if (location == null) {
@@ -22,7 +22,7 @@ public class TripTask extends Task {
 	}
 	
 	@Override
-	protected void doAfterSubtask(Task subtask) {
+	protected void runAfterEachSubtask(Task subtask) {
 		ResourceTask resourceTask = (ResourceTask)subtask;
 		addSubtasksFirst(resourceTask.getFutureTasks());
 	}

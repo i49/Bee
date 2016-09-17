@@ -11,10 +11,10 @@ public class Task {
 	public Task() {
 	}
 	
-	public void doTask() {
-		if (doBeforeSubtasks()) {
-			doSubtasks();
-			doAfterSubtasks();
+	public void run() {
+		if (runBeforeSubtasks()) {
+			executeSubtasks();
+			runAfterSubtasks();
 		}
 	}
 	
@@ -39,25 +39,25 @@ public class Task {
 		this.visitor = visitor;
 	}
 
-	protected boolean doBeforeSubtasks() {
+	protected boolean runBeforeSubtasks() {
 		return true;
 	}
 	
-	protected void doAfterSubtasks() {
-	}
-	
-	protected void doAfterSubtask(Task subtask) {
-	}
-	
-	protected void notifyEvent(Consumer<BeeEventHandler> listener) {
-		getVisitor().notifyEvent(listener);
-	}
-	
-	private void doSubtasks() {
+	protected void executeSubtasks() {
 		while (!this.subtasks.isEmpty()) {
 			Task subtask = this.subtasks.removeFirst();
-			subtask.doTask();
-			doAfterSubtask(subtask);
+			subtask.run();
+			runAfterEachSubtask(subtask);
 		}
+	}
+
+	protected void runAfterSubtasks() {
+	}
+	
+	protected void runAfterEachSubtask(Task subtask) {
+	}
+
+	protected void notifyEvent(Consumer<BeeEventHandler> listener) {
+		getVisitor().notifyEvent(listener);
 	}
 }
