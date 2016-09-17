@@ -2,17 +2,12 @@ package com.github.i49.bee.core;
 
 import java.util.LinkedList;
 
-public class Task<T> {
+public class Task {
 
-	private Task<T> parent;
-	private final LinkedList<Task<T>> subtasks = new LinkedList<>();
-	private T context;
+	private final LinkedList<Task> subtasks = new LinkedList<>();
+	private Visitor visitor;
 
 	public Task() {
-	}
-	
-	public Task(T context) {
-		this.context = context;
 	}
 	
 	public void doTask() {
@@ -22,18 +17,25 @@ public class Task<T> {
 		}
 	}
 	
-	public void addSubtask(Task<T> subtask) {
-		subtask.parent = this;
-		subtask.context = this.context;
+	public void addSubtask(Task subtask) {
+		subtask.visitor = this.visitor;
 		this.subtasks.add(subtask);
 	}
 	
-	public Task<T> getParent() {
-		return parent;
+	public void addSubtasksFirst(Iterable<Task> subtasks) {
+		int pos = 0;
+		for (Task subtask : subtasks) {
+			subtask.visitor = this.visitor;
+			this.subtasks.add(pos, subtask);
+		}
 	}
 
-	public T getContext() {
-		return context;
+	public Visitor getVisitor() {
+		return visitor;
+	}
+	
+	public void setVisitor(Visitor visitor) {
+		this.visitor = visitor;
 	}
 
 	protected boolean doBeforeSubtasks() {
@@ -43,12 +45,12 @@ public class Task<T> {
 	protected void doAfterSubtasks() {
 	}
 	
-	protected void doAfterSubtask(Task<T> subtask) {
+	protected void doAfterSubtask(Task subtask) {
 	}
 	
 	private void doSubtasks() {
 		while (!this.subtasks.isEmpty()) {
-			Task<T> subtask = this.subtasks.removeFirst();
+			Task subtask = this.subtasks.removeFirst();
 			subtask.doTask();
 			doAfterSubtask(subtask);
 		}

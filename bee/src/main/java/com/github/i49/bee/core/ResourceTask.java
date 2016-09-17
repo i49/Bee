@@ -1,7 +1,9 @@
 package com.github.i49.bee.core;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.github.i49.bee.web.Link;
@@ -14,7 +16,7 @@ import com.github.i49.bee.web.WebResource;
 /**
  * Task to collect web resource.
  */
-public class ResourceTask extends VisitorTask {
+public class ResourceTask extends Task {
 
 	private final Locator location;
 	private final int distance;
@@ -24,6 +26,7 @@ public class ResourceTask extends VisitorTask {
 	private WebResource resource; 
 	
 	private final Map<Locator, ResourceMetadata> links = new LinkedHashMap<>();
+	private final List<Task> futureTasks = new ArrayList<>();
 	
 	public ResourceTask(Locator location, int distance) {
 		this(location, distance, 0);
@@ -79,6 +82,10 @@ public class ResourceTask extends VisitorTask {
 		this.phase = phase;
 	}
 
+	public List<Task> getFutureTasks() {
+		return futureTasks;
+	}
+	
 	@Override
 	protected boolean doBeforeSubtasks() {
 		if (getVisitor().hasDone(getLocation())) {
@@ -101,9 +108,16 @@ public class ResourceTask extends VisitorTask {
 	}
 
 	@Override
-	protected void doAfterSubtask(Task<Visitor> subtask) {
+	protected void doAfterSubtask(Task subtask) {
 		ResourceTask actual = (ResourceTask)subtask;
 		this.links.put(actual.getLocation(), actual.getMetadata());
+		if (subtask instanceof HyperlinkResourceTask) {
+			HyperlinkResourceTask resourceTask = (HyperlinkResourceTask)subtask;
+			ResourceRecord record = resourceTask.getRecord();
+			if (record != null) {
+				visitLater(record.getMetadata());
+			}
+		}
 	}
 
 	protected void retrieveResource() throws WebException {
@@ -156,5 +170,13 @@ public class ResourceTask extends VisitorTask {
 	protected ResourceRecord recordResource(Locator location, WebResource resource) {
 		ResourceRegistry registry = getVisitor().getRegistry();
 		return registry.register(location, resource.getMetadata());
+	}
+	
+	protected void visitLater(ResourceMetadata metadata) {
+		Locator location = metadata.getLocation();
+		int distance = getDistance() + 1;
+		if (getVisitor().canVisit(location, distance)) {
+			this.futureTasks.add(new ResourceTask(location, distance));
+		}
 	}
 }

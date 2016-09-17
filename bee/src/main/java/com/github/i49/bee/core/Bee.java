@@ -68,7 +68,8 @@ public class Bee {
 	
 	protected void makeAllTrips() throws Exception {
 		try (WebDownloader downloader = createWebDownloader(this.hive)) {
-			Visitor visitor = asVisitor(downloader);
+			BeeAsVisitor visitor = asVisitor();
+			visitor.downloader = downloader;
 			RootTask task = createRootTask(visitor);
 			task.doTask();
 		}
@@ -79,9 +80,10 @@ public class Bee {
 	}
 	
 	protected RootTask createRootTask(Visitor visitor) {
-		RootTask root = new RootTask(visitor);
-		for (Trip seed : this.trips) {
-			root.addSubtask(new TripTask(seed));
+		RootTask root = new RootTask();
+		root.setVisitor(visitor);
+		for (Trip trip : this.trips) {
+			root.addSubtask(new TripTask(trip));
 		}
 		return root;
 	}
@@ -108,18 +110,14 @@ public class Bee {
 		this.listeners.add(new DefaultReporter());
 	}
 	
-	protected Visitor asVisitor(WebDownloader downloader) {
-		return new BeeAsVisitor(downloader);
+	protected BeeAsVisitor asVisitor() {
+		return new BeeAsVisitor();
 	}
 	
 	private class BeeAsVisitor implements Visitor {
 
-		private final WebDownloader downloader;
+		private WebDownloader downloader;
 		private Trip currentTrip;
-		
-		public BeeAsVisitor(WebDownloader downloader) {
-			this.downloader = downloader;
-		}
 		
 		@Override
 		public boolean canVisit(Locator location) {
