@@ -342,21 +342,6 @@ public class Bee {
 		}
 		
 		@Override
-		public WebDownloader getDownloader() {
-			return downloader;
-		}
-
-		@Override
-		public Hive getHive() {
-			return hive;
-		}
-
-		@Override
-		public ResourceRegistry getRegistry() {
-			return registry;
-		}
-
-		@Override
 		public boolean canVisit(Locator location) {
 			for (WebSite site : sites) {
 				if (site.contains(location)) {
@@ -375,6 +360,20 @@ public class Bee {
 		}
 
 		@Override
+		public boolean hasDone(Locator location) {
+			ResourceRecord record = getRegistry().find(location);
+			if (record == null) {
+				return false;
+			}
+			return getCurrentTrip().hasDone(record);
+		}
+		
+		@Override
+		public void addDone(ResourceRecord record) {
+			getCurrentTrip().addDone(record);
+		}
+
+		@Override
 		public Trip getCurrentTrip() {
 			return currentTrip;
 		}
@@ -382,6 +381,21 @@ public class Bee {
 		@Override
 		public void setCurrentTrip(Trip trip) {
 			this.currentTrip = trip;
+		}
+
+		@Override
+		public WebDownloader getDownloader() {
+			return downloader;
+		}
+
+		@Override
+		public Hive getHive() {
+			return hive;
+		}
+
+		@Override
+		public ResourceRegistry getRegistry() {
+			return registry;
 		}
 
 		@Override

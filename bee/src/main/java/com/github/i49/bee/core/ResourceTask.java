@@ -29,7 +29,7 @@ public class ResourceTask extends VisitorTask {
 	
 	public ResourceTask(Locator location, int distance) {
 		this(location, distance, 0);
-		this.phase = ResourceTaskPhase.INITIAL;
+		setPhase(ResourceTaskPhase.INITIAL);
 	}
 
 	public ResourceTask(Locator location, int distance, int level) {
@@ -63,14 +63,17 @@ public class ResourceTask extends VisitorTask {
 	}
 	
 	public ResourceRecord getRecord() {
-		return record;
+		ResourceRegistry registry = getVisitor().getRegistry();
+		return registry.find(getLocation());
 	}
 	
 	public int getResourceId() {
+		ResourceRecord record = getRecord();
 		return (record != null) ? record.getId() : -1;
 	}
 	
 	public ResourceMetadata getMetadata() {
+		ResourceRecord record = getRecord();
 		return (record != null) ? record.getMetadata() : null;
 	}
 	
@@ -100,6 +103,9 @@ public class ResourceTask extends VisitorTask {
 
 	@Override
 	protected boolean doBeforeSubtasks() {
+		if (getVisitor().hasDone(getLocation())) {
+			return false;
+		}
 		setPhase(ResourceTaskPhase.GET);
 		try {
 			retrieveResource();
@@ -157,18 +163,21 @@ public class ResourceTask extends VisitorTask {
 	}
 	
 	protected void storeResource() {
-		if (this.record.isStored()) {
+		ResourceRecord record = getRecord();
+		if (record.isStored()) {
 			return;
 		}
 		try {
 			getVisitor().getHive().store(getResource(), this.links);
-			getRecord().setStored();
+			record.setStored();
+			getVisitor().addDone(record);
 			getVisitor().notifyEvent(x->x.handleTaskEvent(this));
 		} catch (IOException e) {
 		}
 	}
 	
 	protected ResourceRecord recordResource(Locator location, WebResource resource) {
-		return getVisitor().getRegistry().register(location, resource.getMetadata());
+		ResourceRegistry registry = getVisitor().getRegistry();
+		return registry.register(location, resource.getMetadata());
 	}
 }

@@ -7,20 +7,24 @@ import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebDownloader;
 
 public interface Visitor {
-
-	WebDownloader getDownloader();
-	
-	Hive getHive();
-	
-	ResourceRegistry getRegistry();
 	
 	boolean canVisit(Locator location);
 	
 	boolean canVisit(Locator location, int distance);
 	
+	boolean hasDone(Locator location);
+	
+	void addDone(ResourceRecord record);
+
 	Trip getCurrentTrip();
 
 	void setCurrentTrip(Trip trip);
 	
+	WebDownloader getDownloader();
+	
+	Hive getHive();
+	
+	ResourceRegistry getRegistry();
+
 	void notifyEvent(Consumer<BeeEventListener> consumer);
 }
