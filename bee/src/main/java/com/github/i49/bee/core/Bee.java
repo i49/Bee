@@ -28,7 +28,7 @@ public class Bee {
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private Hive hive; 
-	private VisitMap registry;
+	private VisitMap visitMap;
 	private final List<BeeEventHandler> handlers = new ArrayList<>();
 	
 	public Bee() {
@@ -63,7 +63,7 @@ public class Bee {
 			this.hive = createDefaultHive();
 		}
 		this.hive.open();
-		this.registry = new VisitMap();
+		this.visitMap = new VisitMap();
 	}
 	
 	protected void makeAllTrips() throws Exception {
@@ -173,7 +173,7 @@ public class Bee {
 
 		@Override
 		public VisitMap getVisitMap() {
-			return registry;
+			return visitMap;
 		}
 
 		@Override

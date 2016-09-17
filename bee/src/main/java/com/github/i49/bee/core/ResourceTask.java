@@ -22,7 +22,6 @@ public class ResourceTask extends Task {
 	private final int distance;
 	private final int level;
 
-	private ResourceTaskPhase phase;
 	private WebResource resource; 
 	
 	private final Map<Locator, ResourceMetadata> links = new LinkedHashMap<>();
@@ -30,7 +29,6 @@ public class ResourceTask extends Task {
 	
 	public ResourceTask(Locator location, int distance) {
 		this(location, distance, 0);
-		setPhase(ResourceTaskPhase.INITIAL);
 	}
 
 	public ResourceTask(Locator location, int distance, int level) {
@@ -74,14 +72,6 @@ public class ResourceTask extends Task {
 		return (visit != null) ? visit.getMetadata() : null;
 	}
 	
-	public ResourceTaskPhase getPhase() {
-		return phase;
-	}
-
-	public void setPhase(ResourceTaskPhase phase) {
-		this.phase = phase;
-	}
-
 	public List<Task> getFutureTasks() {
 		return futureTasks;
 	}
@@ -91,7 +81,6 @@ public class ResourceTask extends Task {
 		if (getVisitor().hasDone(getLocation())) {
 			return false;
 		}
-		setPhase(ResourceTaskPhase.GET);
 		try {
 			retrieveResource();
 			parseResource();
@@ -103,7 +92,6 @@ public class ResourceTask extends Task {
 
 	@Override
 	protected void doAfterSubtasks() {
-		setPhase(ResourceTaskPhase.STORE);
 		storeResource();
 	}
 
