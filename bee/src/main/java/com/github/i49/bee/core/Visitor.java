@@ -6,7 +6,7 @@ import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebDownloader;
 
-public interface BeeContext {
+public interface Visitor {
 
 	WebDownloader getDownloader();
 	
@@ -14,7 +14,13 @@ public interface BeeContext {
 	
 	ResourceRegistry getRegistry();
 	
-	boolean allowsToVisit(Locator location);
+	boolean canVisit(Locator location);
+	
+	boolean canVisit(Locator location, int distance);
+	
+	Trip getCurrentTrip();
+
+	void setCurrentTrip(Trip trip);
 	
 	void notifyEvent(Consumer<BeeEventListener> consumer);
 }

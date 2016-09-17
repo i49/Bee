@@ -13,7 +13,7 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.i49.bee.core.Bee;
-import com.github.i49.bee.core.Seed;
+import com.github.i49.bee.core.Trip;
 import com.github.i49.bee.core.WebSite;
 
 public class BuzzParser {
@@ -61,14 +61,14 @@ public class BuzzParser {
 		return bee;
 	}
 	
-	private void configureSeeds(List<Seed> seeds, JsonNode nodes) {
+	private void configureSeeds(List<Trip> seeds, JsonNode nodes) {
 		Set<String> supported = fields("location", "distance");
 		Set<String> required = fields("location");
 		for (JsonNode node : nodes) {
 			validateNode(node, supported, required);
 			String location = node.path("location").textValue();
 			int distance = node.path("distance").intValue();
-			Seed seed = new Seed(location, distance); 
+			Trip seed = new Trip(location, distance); 
 			seeds.add(seed);
 		}
 	}

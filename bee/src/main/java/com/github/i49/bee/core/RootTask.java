@@ -1,8 +1,8 @@
 package com.github.i49.bee.core;
 
-public class RootTask extends Task<BeeContext> {
+public class RootTask extends VisitorTask {
 
-	public RootTask(BeeContext context) {
-		super(context);
+	public RootTask(Visitor visitor) {
+		super(visitor);
 	}
 }

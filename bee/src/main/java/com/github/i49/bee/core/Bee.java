@@ -36,7 +36,7 @@ public class Bee {
 	
 	private static final Log log = LogFactory.getLog(Bee.class);
 	
-	private final List<Seed> seeds = new ArrayList<>();
+	private final List<Trip> seeds = new ArrayList<>();
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private WebDownloader downloader;
@@ -53,7 +53,7 @@ public class Bee {
 		addDefaultEventListeners();
 	}
 
-	public List<Seed> getSeeds() {
+	public List<Trip> getSeeds() {
 		return seeds;
 	}
 	
@@ -69,15 +69,9 @@ public class Bee {
 		log.debug("Bee launched.");
 		try {
 			prepareBeforeAllTrips();
-			try (WebDownloader downloader = createWebDownloader(this.hive)) {
-				this.downloader = downloader;
-				RootTask task = createRootTask(this.seeds);
-				task.doTask();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			makeAllTrips();
 			unprepareAfterAllTrips();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -91,32 +85,28 @@ public class Bee {
 		this.registry = new ResourceRegistry();
 	}
 	
+	protected void makeAllTrips() throws Exception {
+		try (WebDownloader downloader = createWebDownloader(this.hive)) {
+			Visitor visitor = asVisitor(downloader);
+			RootTask task = createRootTask(visitor);
+			task.doTask();
+		}
+	}
+
 	protected void unprepareAfterAllTrips() throws IOException {
 		this.hive.close();
 	}
 	
-	protected void makeAllTrips(List<Seed> seeds) {
-		try (WebDownloader downloader = createWebDownloader(this.hive)) {
-			this.downloader = downloader;
-			for (Seed seed : seeds) {
-				makeTrip(seed);
-			}
-			this.downloader = null;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	protected void makeTrip(Seed seed) {
+	protected void makeTrip(Trip seed) {
 		prepareBeforeTrip(seed);
 		doAllTasks(seed.getDistanceLimit());
 		unprepareAfterTrip();
 	}
 	
-	protected void prepareBeforeTrip(Seed seed) {
+	protected void prepareBeforeTrip(Trip seed) {
 		this.done.clear();
 		this.tasks.clear();
-		Locator location = Locator.parse(seed.getLocation());
+		Locator location = Locator.parse(seed.getStartingPoint());
 		if (location != null) {
 			this.tasks.add(new ResourceTask(location, 0));
 		}
@@ -308,9 +298,9 @@ public class Bee {
 		}
 	}
 	
-	protected RootTask createRootTask(List<Seed> seeds) {
-		RootTask root = new RootTask(new BeeContextImpl());
-		for (Seed seed : seeds) {
+	protected RootTask createRootTask(Visitor visitor) {
+		RootTask root = new RootTask(visitor);
+		for (Trip seed : this.seeds) {
 			root.addSubtask(new TripTask(seed));
 		}
 		return root;
@@ -338,8 +328,19 @@ public class Bee {
 		this.listeners.add(new DefaultReporter());
 	}
 	
-	private class BeeContextImpl implements BeeContext {
+	protected Visitor asVisitor(WebDownloader downloader) {
+		return new BeeAsVisitor(downloader);
+	}
+	
+	private class BeeAsVisitor implements Visitor {
 
+		private final WebDownloader downloader;
+		private Trip currentTrip;
+		
+		public BeeAsVisitor(WebDownloader downloader) {
+			this.downloader = downloader;
+		}
+		
 		@Override
 		public WebDownloader getDownloader() {
 			return downloader;
@@ -356,8 +357,31 @@ public class Bee {
 		}
 
 		@Override
-		public boolean allowsToVisit(Locator location) {
+		public boolean canVisit(Locator location) {
+			for (WebSite site : sites) {
+				if (site.contains(location)) {
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		@Override
+		public boolean canVisit(Locator location, int distance) {
+			if (distance > getCurrentTrip().getDistanceLimit()) {
+				return false;
+			}
 			return canVisit(location);
+		}
+
+		@Override
+		public Trip getCurrentTrip() {
+			return currentTrip;
+		}
+
+		@Override
+		public void setCurrentTrip(Trip trip) {
+			this.currentTrip = trip;
 		}
 
 		@Override

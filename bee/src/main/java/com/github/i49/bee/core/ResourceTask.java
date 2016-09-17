@@ -14,7 +14,7 @@ import com.github.i49.bee.web.WebResource;
 /**
  * Task to collect web resource.
  */
-public class ResourceTask extends Task<BeeContext> {
+public class ResourceTask extends VisitorTask {
 
 	private final Locator location;
 	private final int distance;
@@ -117,7 +117,7 @@ public class ResourceTask extends Task<BeeContext> {
 	}
 
 	@Override
-	protected void doAfterSubtask(Task<BeeContext> subtask) {
+	protected void doAfterSubtask(Task<Visitor> subtask) {
 		ResourceTask actual = (ResourceTask)subtask;
 		this.links.put(actual.getLocation(), actual.getMetadata());
 	}
@@ -125,13 +125,13 @@ public class ResourceTask extends Task<BeeContext> {
 	protected void retrieveResource() throws WebException {
 		try {
 			Locator location = getLocation();
-			WebResource resource =  getContext().getDownloader().download(location);
+			WebResource resource =  getVisitor().getDownloader().download(location);
 			setResource(resource);
 			setRecord(recordResource(location, resource));
-			getContext().notifyEvent(x->x.handleTaskEvent(this));
+			getVisitor().notifyEvent(x->x.handleTaskEvent(this));
 		} catch (WebException e) {
 			setErrorCause(e);
-			getContext().notifyEvent(x->x.handleTaskFailure(this));
+			getVisitor().notifyEvent(x->x.handleTaskFailure(this));
 			throw e;
 		}
 	}
@@ -143,14 +143,15 @@ public class ResourceTask extends Task<BeeContext> {
 		LinkProvidingResource resource = (LinkProvidingResource)this.resource;
 		for (Link link : resource.getDependencyLinks()) {
 			Locator location = link.getLocation();
-			if (getContext().allowsToVisit(location)) {
+			if (getVisitor().canVisit(location)) {
 				addSubtask(new ExternalResourceTask(location, getDistance() + 1, getLevel() + 1));
 			}
 		}
 		for (Link link : resource.getExternalLinks()) {
-			Locator location = link.getLocation();
-			if (getContext().allowsToVisit(location)) {
-				addSubtask(new HyperlinkResourceTask(location, getDistance() + 1, getLevel() + 1));
+			final Locator location = link.getLocation();
+			final int distance = getDistance() + 1;
+			if (getVisitor().canVisit(location, distance)) {
+				addSubtask(new HyperlinkResourceTask(location, distance, getLevel() + 1));
 			}
 		}
 	}
@@ -160,14 +161,14 @@ public class ResourceTask extends Task<BeeContext> {
 			return;
 		}
 		try {
-			getContext().getHive().store(getResource(), this.links);
+			getVisitor().getHive().store(getResource(), this.links);
 			getRecord().setStored();
-			getContext().notifyEvent(x->x.handleTaskEvent(this));
+			getVisitor().notifyEvent(x->x.handleTaskEvent(this));
 		} catch (IOException e) {
 		}
 	}
 	
 	protected ResourceRecord recordResource(Locator location, WebResource resource) {
-		return getContext().getRegistry().register(location, resource.getMetadata());
+		return getVisitor().getRegistry().register(location, resource.getMetadata());
 	}
 }

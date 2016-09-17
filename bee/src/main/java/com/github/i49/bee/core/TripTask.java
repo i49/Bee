@@ -2,17 +2,18 @@ package com.github.i49.bee.core;
 
 import com.github.i49.bee.web.Locator;
 
-public class TripTask extends Task<BeeContext> {
+public class TripTask extends VisitorTask {
 	
-	private final Seed seed;
+	private final Trip trip;
 	
-	public TripTask(Seed seed) {
-		this.seed = seed;
+	public TripTask(Trip trip) {
+		this.trip = trip;
 	}
 
 	@Override
 	protected boolean doBeforeSubtasks() {
-		Locator location = Locator.parse(seed.getLocation());
+		getVisitor().setCurrentTrip(this.trip);
+		Locator location = Locator.parse(trip.getStartingPoint());
 		if (location == null) {
 			return false;
 		}
