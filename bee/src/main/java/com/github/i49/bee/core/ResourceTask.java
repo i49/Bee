@@ -122,13 +122,13 @@ public class ResourceTask extends Task {
 
 	protected void retrieveResource() throws WebException {
 		try {
-			Locator location = getLocation();
-			WebResource resource =  getVisitor().getDownloader().download(location);
+			notifyEvent(x->x.handleDownloadStarted(getDistance(), getLevel(), getLocation()));
+			WebResource resource =  getVisitor().getDownloader().download(getLocation());
 			this.resource = resource;
-			recordResource(location, resource);
-			getVisitor().notifyEvent(x->x.handleTaskEvent(this));
+			recordResource(getLocation(), resource);
+			notifyEvent(x->x.handleDownloadCompleted(getDistance(), getLevel(), getVisit()));
 		} catch (WebException e) {
-			getVisitor().notifyEvent(x->x.handleTaskFailure(this, e));
+			notifyEvent(x->x.handleDownloadFailed(getDistance(), getLevel(), getLocation(), e));
 			throw e;
 		}
 	}
@@ -159,11 +159,13 @@ public class ResourceTask extends Task {
 			return;
 		}
 		try {
+			notifyEvent(x->x.handleStoreStarted(getDistance(), getLevel(), getVisit()));
 			getVisitor().getHive().store(getResource(), this.links);
 			record.setStored();
 			getVisitor().addDone(record);
-			getVisitor().notifyEvent(x->x.handleTaskEvent(this));
+			notifyEvent(x->x.handleStoreCompleted(getDistance(), getLevel(), getVisit()));
 		} catch (IOException e) {
+			notifyEvent(x->x.handleStoreFailed(getDistance(), getLevel(), getVisit(), e));
 		}
 	}
 	

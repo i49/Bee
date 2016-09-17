@@ -29,10 +29,10 @@ public class Bee {
 	
 	private Hive hive; 
 	private VisitMap registry;
-	private final List<BeeEventListener> listeners = new ArrayList<>();
+	private final List<BeeEventHandler> handlers = new ArrayList<>();
 	
 	public Bee() {
-		addDefaultEventListeners();
+		addDefaultEventHandlers();
 	}
 
 	public List<Trip> getTrips() {
@@ -43,8 +43,8 @@ public class Bee {
 		return sites;
 	}
 	
-	public List<BeeEventListener> getEventListeners() {
-		return listeners;
+	public List<BeeEventHandler> getEventHandlers() {
+		return handlers;
 	}
 	
 	public void launch() {
@@ -106,8 +106,8 @@ public class Bee {
 		}
 	}
 	
-	protected void addDefaultEventListeners() {
-		this.listeners.add(new DefaultReporter());
+	protected void addDefaultEventHandlers() {
+		this.handlers.add(new DefaultReporter());
 	}
 	
 	protected BeeAsVisitor asVisitor() {
@@ -177,9 +177,9 @@ public class Bee {
 		}
 
 		@Override
-		public void notifyEvent(Consumer<BeeEventListener> consumer) {
-			for (BeeEventListener listener : listeners) {
-				consumer.accept(listener);
+		public void notifyEvent(Consumer<BeeEventHandler> consumer) {
+			for (BeeEventHandler handler : handlers) {
+				consumer.accept(handler);
 			}
 		}
 	}

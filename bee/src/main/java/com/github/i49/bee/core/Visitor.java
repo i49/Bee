@@ -26,5 +26,5 @@ public interface Visitor {
 	
 	VisitMap getVisitMap();
 
-	void notifyEvent(Consumer<BeeEventListener> consumer);
+	void notifyEvent(Consumer<BeeEventHandler> consumer);
 }

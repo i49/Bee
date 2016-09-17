@@ -1,6 +1,7 @@
 package com.github.i49.bee.core;
 
 import java.util.LinkedList;
+import java.util.function.Consumer;
 
 public class Task {
 
@@ -46,6 +47,10 @@ public class Task {
 	}
 	
 	protected void doAfterSubtask(Task subtask) {
+	}
+	
+	protected void notifyEvent(Consumer<BeeEventHandler> listener) {
+		getVisitor().notifyEvent(listener);
 	}
 	
 	private void doSubtasks() {
