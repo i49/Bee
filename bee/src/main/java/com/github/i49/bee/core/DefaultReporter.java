@@ -16,7 +16,7 @@ public class DefaultReporter implements BeeEventListener {
 	}
 
 	@Override
-	public void handleTaskFailure(ResourceTask task) {
+	public void handleTaskFailure(ResourceTask task, Exception e) {
 		reportTask(task, "FAILED");
 	}
 	

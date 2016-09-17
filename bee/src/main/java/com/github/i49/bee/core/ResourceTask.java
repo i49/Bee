@@ -22,8 +22,6 @@ public class ResourceTask extends VisitorTask {
 
 	private ResourceTaskPhase phase;
 	private WebResource resource; 
-	private ResourceRecord record;
-	private Exception errorCause;
 	
 	private final Map<Locator, ResourceMetadata> links = new LinkedHashMap<>();
 	
@@ -58,10 +56,6 @@ public class ResourceTask extends VisitorTask {
 		return resource;
 	}
 
-	public void setResource(WebResource resource) {
-		this.resource = resource;
-	}
-	
 	public ResourceRecord getRecord() {
 		ResourceRegistry registry = getVisitor().getRegistry();
 		return registry.find(getLocation());
@@ -77,28 +71,12 @@ public class ResourceTask extends VisitorTask {
 		return (record != null) ? record.getMetadata() : null;
 	}
 	
-	public void setRecord(ResourceRecord record) {
-		this.record = record;
-	}
-
 	public ResourceTaskPhase getPhase() {
 		return phase;
 	}
 
 	public void setPhase(ResourceTaskPhase phase) {
 		this.phase = phase;
-	}
-
-	public Exception getErrorCause() {
-		return errorCause;
-	}
-	
-	public void setErrorCause(Exception cause) {
-		this.errorCause = cause;
-	}
-	
-	public ResourceTask createSubtask(Locator location) {
-		return new ResourceTask(location, this.distance + 1, this.level + 1);
 	}
 
 	@Override
@@ -132,12 +110,11 @@ public class ResourceTask extends VisitorTask {
 		try {
 			Locator location = getLocation();
 			WebResource resource =  getVisitor().getDownloader().download(location);
-			setResource(resource);
-			setRecord(recordResource(location, resource));
+			this.resource = resource;
+			recordResource(location, resource);
 			getVisitor().notifyEvent(x->x.handleTaskEvent(this));
 		} catch (WebException e) {
-			setErrorCause(e);
-			getVisitor().notifyEvent(x->x.handleTaskFailure(this));
+			getVisitor().notifyEvent(x->x.handleTaskFailure(this, e));
 			throw e;
 		}
 	}

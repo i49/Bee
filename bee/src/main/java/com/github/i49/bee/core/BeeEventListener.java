@@ -7,5 +7,5 @@ public interface BeeEventListener {
 
 	void handleTaskEvent(ResourceTask task);
 	
-	void handleTaskFailure(ResourceTask task);
+	void handleTaskFailure(ResourceTask task, Exception e);
 }

@@ -47,7 +47,7 @@ public class BuzzParser {
 		JsonNode seedsNode = node.get("seeds");
 		if (seedsNode != null) {
 			if (seedsNode.isArray()) {	
-				configureSeeds(bee.getSeeds(), seedsNode);
+				configureSeeds(bee.getTrips(), seedsNode);
 			}
 		}
 		
