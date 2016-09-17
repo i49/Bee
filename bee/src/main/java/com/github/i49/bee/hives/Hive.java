@@ -8,7 +8,7 @@ import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebResource;
 
-public interface Hive {
+public interface Hive extends AutoCloseable {
 	
 	Path getBasePath();
 	
@@ -20,7 +20,5 @@ public interface Hive {
 	
 	void open() throws IOException;
 	
-	void close() throws IOException;
-
 	void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException;
 }

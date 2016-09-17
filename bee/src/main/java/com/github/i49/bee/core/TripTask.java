@@ -12,7 +12,6 @@ public class TripTask extends Task {
 
 	@Override
 	protected boolean runBeforeSubtasks() {
-		getVisitor().setCurrentTrip(this.trip);
 		Locator location = Locator.parse(trip.getStartingPoint());
 		if (location == null) {
 			return false;

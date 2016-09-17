@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +30,7 @@ public class Bee {
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private Hive hive; 
+	private WebDownloader downloader;
 	private VisitMap visitMap;
 	private final List<BeeEventHandler> handlers = new ArrayList<>();
 	
@@ -50,50 +53,40 @@ public class Bee {
 	public void launch() {
 		log.debug("Bee launched.");
 		try {
-			prepareBeforeAllTrips();
 			makeAllTrips();
-			unprepareAfterAllTrips();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	protected void prepareBeforeAllTrips() throws IOException {
+	protected void makeAllTrips() throws Exception {
+		this.visitMap = new VisitMap();
+		try (Hive hive = openHive(); WebDownloader downloader = createWebDownloader(hive)) {
+			runTasks();
+		}
+	}
+
+	protected void runTasks() {
+		for (Trip trip : this.trips) {
+			TripTask task = new TripTask(trip);
+			BeeAsVisitor visitor = createVisitor(trip.getDistanceLimit());
+			task.setVisitor(visitor);
+			task.run();
+		}
+	}
+	
+	protected Hive openHive() throws IOException {
 		if (this.hive == null) {
-			this.hive = createDefaultHive();
+			this.hive = new DefaultHive();
 		}
 		this.hive.open();
-		this.visitMap = new VisitMap();
-	}
-	
-	protected void makeAllTrips() throws Exception {
-		try (WebDownloader downloader = createWebDownloader(this.hive)) {
-			BeeAsVisitor visitor = asVisitor();
-			visitor.downloader = downloader;
-			createRootTask(visitor).run();
-		}
+		return this.hive;
 	}
 
-	protected void unprepareAfterAllTrips() throws IOException {
-		this.hive.close();
-	}
-	
-	protected RootTask createRootTask(Visitor visitor) {
-		RootTask root = new RootTask();
-		root.setVisitor(visitor);
-		for (Trip trip : this.trips) {
-			root.addSubtask(new TripTask(trip));
-		}
-		return root;
-	}
-
-	protected Hive createDefaultHive() {
-		return new DefaultHive();
-	}
-	
 	protected WebDownloader createWebDownloader(Hive hive) throws IOException {
 		Path pathToCache = getCacheDirectoryForHive(hive);
-		return new CachingWebDownloader(pathToCache);
+		this.downloader = new CachingWebDownloader(pathToCache);
+		return downloader;
 	}
 	
 	private static Path getCacheDirectoryForHive(Hive hive) {
@@ -109,14 +102,21 @@ public class Bee {
 		this.handlers.add(new DefaultReporter());
 	}
 	
-	protected BeeAsVisitor asVisitor() {
-		return new BeeAsVisitor();
+	protected BeeAsVisitor createVisitor(int distanceLimit) {
+		return new BeeAsVisitor(distanceLimit);
 	}
-	
+
+	/**
+	 * A visitor making one trip.
+	 */
 	private class BeeAsVisitor implements Visitor {
 
-		private WebDownloader downloader;
-		private Trip currentTrip;
+		private final int distanceLimit;
+		private final Set<Visit> done = new HashSet<>();
+		
+		public BeeAsVisitor(int distanceLimit) {
+			this.distanceLimit = distanceLimit;
+		}
 		
 		@Override
 		public boolean canVisit(Locator location) {
@@ -130,7 +130,7 @@ public class Bee {
 		
 		@Override
 		public boolean canVisit(Locator location, int distance) {
-			if (distance > getCurrentTrip().getDistanceLimit()) {
+			if (distance > this.distanceLimit) {
 				return false;
 			}
 			return canVisit(location);
@@ -138,26 +138,18 @@ public class Bee {
 
 		@Override
 		public boolean hasDone(Locator location) {
-			Visit record = getVisitMap().findVisit(location);
-			if (record == null) {
+			Visit visit = getVisitMap().findVisit(location);
+			if (visit == null) {
 				return false;
 			}
-			return getCurrentTrip().hasDone(record);
+			return this.done.contains(visit);
 		}
 		
 		@Override
-		public void addDone(Visit record) {
-			getCurrentTrip().addDone(record);
-		}
-
-		@Override
-		public Trip getCurrentTrip() {
-			return currentTrip;
-		}
-
-		@Override
-		public void setCurrentTrip(Trip trip) {
-			this.currentTrip = trip;
+		public void addDone(Visit visit) {
+			if (visit != null) {
+				this.done.add(visit);
+			}
 		}
 
 		@Override
@@ -177,9 +169,7 @@ public class Bee {
 
 		@Override
 		public void notifyEvent(Consumer<BeeEventHandler> consumer) {
-			for (BeeEventHandler handler : handlers) {
-				consumer.accept(handler);
-			}
+			handlers.stream().forEach(consumer);
 		}
 	}
 }

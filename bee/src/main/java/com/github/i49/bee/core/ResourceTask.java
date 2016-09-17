@@ -112,8 +112,7 @@ public class ResourceTask extends Task {
 		try {
 			notifyEvent(x->x.handleDownloadStarted(getDistance(), getLevel(), getLocation()));
 			WebResource resource =  getVisitor().getDownloader().download(getLocation());
-			this.resource = resource;
-			recordResource(getLocation(), resource);
+			recordVisit(getLocation(), resource);
 			notifyEvent(x->x.handleDownloadCompleted(getDistance(), getLevel(), getVisit()));
 		} catch (WebException e) {
 			notifyEvent(x->x.handleDownloadFailed(getDistance(), getLevel(), getLocation(), e));
@@ -142,24 +141,25 @@ public class ResourceTask extends Task {
 	}
 	
 	protected void storeResource() {
-		Visit record = getVisit();
-		if (record.isStored()) {
+		Visit visit = getVisit();
+		if (visit.isStored()) {
 			return;
 		}
 		try {
 			notifyEvent(x->x.handleStoreStarted(getDistance(), getLevel(), getVisit()));
 			getVisitor().getHive().store(getResource(), this.links);
-			record.setStored();
-			getVisitor().addDone(record);
+			visit.setStored();
+			getVisitor().addDone(visit);
 			notifyEvent(x->x.handleStoreCompleted(getDistance(), getLevel(), getVisit()));
 		} catch (IOException e) {
 			notifyEvent(x->x.handleStoreFailed(getDistance(), getLevel(), getVisit(), e));
 		}
 	}
 	
-	protected Visit recordResource(Locator location, WebResource resource) {
-		VisitMap registry = getVisitor().getVisitMap();
-		return registry.addVisit(location, resource.getMetadata());
+	protected Visit recordVisit(Locator location, WebResource resource) {
+		this.resource = resource;
+		VisitMap map = getVisitor().getVisitMap();
+		return map.addVisit(location, resource.getMetadata());
 	}
 	
 	protected void visitLater(ResourceMetadata metadata) {

@@ -34,7 +34,7 @@ public class BasicWebDownloader implements WebDownloader {
 	public void close() {
 		try {
 			this.httpClient.close();
-			log.debug("HTTP client was gracefully closed.");
+			log.debug("HTTP client was closed gracefully.");
 		} catch (IOException e) {
 			// Ignores exception
 			log.debug("Failed to close HTTP client: " + e.getMessage());

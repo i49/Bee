@@ -16,10 +16,6 @@ public interface Visitor {
 	
 	void addDone(Visit record);
 
-	Trip getCurrentTrip();
-
-	void setCurrentTrip(Trip trip);
-	
 	WebDownloader getDownloader();
 	
 	Hive getHive();

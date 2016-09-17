@@ -7,6 +7,9 @@ import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.github.i49.bee.web.LinkProvidingResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
@@ -14,7 +17,8 @@ import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
 public abstract class AbstractHive implements Hive {
-
+	
+	private static final Log log = LogFactory.getLog(AbstractHive.class);
 	private static final String DEFAULT_BASE_PATH = "hive";
 	
 	private Path basePath;
@@ -60,8 +64,14 @@ public abstract class AbstractHive implements Hive {
 	}
 
 	@Override
-	public void close() throws IOException {
-		this.storage.close();
+	public void close() {
+		try {
+			this.storage.close();
+			log.debug("Hive storage was closed gracefully.");
+		} catch (IOException e) {
+			// Ignores exception
+			log.debug("Failed to close hive storage: " + e.getMessage());
+		}
 	}
 
 	@Override
