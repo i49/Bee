@@ -28,7 +28,7 @@ public class Bee {
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private Hive hive; 
-	private ResourceRegistry registry;
+	private VisitMap registry;
 	private final List<BeeEventListener> listeners = new ArrayList<>();
 	
 	public Bee() {
@@ -63,7 +63,7 @@ public class Bee {
 			this.hive = createDefaultHive();
 		}
 		this.hive.open();
-		this.registry = new ResourceRegistry();
+		this.registry = new VisitMap();
 	}
 	
 	protected void makeAllTrips() throws Exception {
@@ -139,7 +139,7 @@ public class Bee {
 
 		@Override
 		public boolean hasDone(Locator location) {
-			ResourceRecord record = getRegistry().find(location);
+			Visit record = getVisitMap().findVisit(location);
 			if (record == null) {
 				return false;
 			}
@@ -147,7 +147,7 @@ public class Bee {
 		}
 		
 		@Override
-		public void addDone(ResourceRecord record) {
+		public void addDone(Visit record) {
 			getCurrentTrip().addDone(record);
 		}
 
@@ -172,7 +172,7 @@ public class Bee {
 		}
 
 		@Override
-		public ResourceRegistry getRegistry() {
+		public VisitMap getVisitMap() {
 			return registry;
 		}
 

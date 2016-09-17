@@ -6,37 +6,37 @@ import java.util.Map;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 
-public class ResourceRegistry {
+public class VisitMap {
 
-	private final Map<Locator, ResourceRecord> resourceMap = new HashMap<>();
+	private final Map<Locator, Visit> visits = new HashMap<>();
 	private int nextId = 1;
 			
-	public ResourceRegistry() {
+	public VisitMap() {
 	}
 	
-	public ResourceRecord register(Locator location, ResourceMetadata metadata) {
+	public Visit addVisit(Locator location, ResourceMetadata metadata) {
 		if (location == null || metadata == null) {
 			throw new IllegalArgumentException();
 		}
-		ResourceRecord entry = find(location);
+		Visit entry = findVisit(location);
 		if (entry != null) {
 			return entry;
 		}
-		entry = find(metadata.getLocation());
+		entry = findVisit(metadata.getLocation());
 		if (entry == null) {
-			entry = new ResourceRecord(this.nextId++, metadata);
-			resourceMap.put(metadata.getLocation(), entry);
+			entry = new Visit(this.nextId++, metadata);
+			visits.put(metadata.getLocation(), entry);
 		}
 		if (!location.equals(metadata.getLastModified())) {
-			resourceMap.put(location, entry);
+			visits.put(location, entry);
 		}
 		return entry;
 	}
 
-	public ResourceRecord find(Locator location) {
+	public Visit findVisit(Locator location) {
 		if (location == null) {
 			throw new IllegalArgumentException();
 		}
-		return resourceMap.get(location);
+		return visits.get(location);
 	}
 }

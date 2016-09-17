@@ -8,7 +8,7 @@ public class Trip {
 	private final String startingPoint;
 	private final int distanceLimit;
 
-	private final Set<ResourceRecord> done = new HashSet<>();
+	private final Set<Visit> done = new HashSet<>();
 	
 	public Trip(String startingPoint, int distanceLimit) {
 		this.startingPoint = startingPoint.trim();
@@ -23,11 +23,11 @@ public class Trip {
 		return distanceLimit;
 	}
 	
-	public boolean hasDone(ResourceRecord record) {
+	public boolean hasDone(Visit record) {
 		return this.done.contains(record);
 	}
 	
-	public void addDone(ResourceRecord record) {
+	public void addDone(Visit record) {
 		if (record != null) {
 			this.done.add(record);
 		}

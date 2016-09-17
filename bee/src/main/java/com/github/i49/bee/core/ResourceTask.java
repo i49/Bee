@@ -59,19 +59,19 @@ public class ResourceTask extends Task {
 		return resource;
 	}
 
-	public ResourceRecord getRecord() {
-		ResourceRegistry registry = getVisitor().getRegistry();
-		return registry.find(getLocation());
+	public Visit getVisit() {
+		VisitMap map = getVisitor().getVisitMap();
+		return map.findVisit(getLocation());
 	}
 	
 	public int getResourceId() {
-		ResourceRecord record = getRecord();
-		return (record != null) ? record.getId() : -1;
+		Visit visit = getVisit();
+		return (visit != null) ? visit.getId() : -1;
 	}
 	
 	public ResourceMetadata getMetadata() {
-		ResourceRecord record = getRecord();
-		return (record != null) ? record.getMetadata() : null;
+		Visit visit = getVisit();
+		return (visit != null) ? visit.getMetadata() : null;
 	}
 	
 	public ResourceTaskPhase getPhase() {
@@ -113,7 +113,7 @@ public class ResourceTask extends Task {
 		this.links.put(actual.getLocation(), actual.getMetadata());
 		if (subtask instanceof HyperlinkResourceTask) {
 			HyperlinkResourceTask resourceTask = (HyperlinkResourceTask)subtask;
-			ResourceRecord record = resourceTask.getRecord();
+			Visit record = resourceTask.getVisit();
 			if (record != null) {
 				visitLater(record.getMetadata());
 			}
@@ -154,7 +154,7 @@ public class ResourceTask extends Task {
 	}
 	
 	protected void storeResource() {
-		ResourceRecord record = getRecord();
+		Visit record = getVisit();
 		if (record.isStored()) {
 			return;
 		}
@@ -167,9 +167,9 @@ public class ResourceTask extends Task {
 		}
 	}
 	
-	protected ResourceRecord recordResource(Locator location, WebResource resource) {
-		ResourceRegistry registry = getVisitor().getRegistry();
-		return registry.register(location, resource.getMetadata());
+	protected Visit recordResource(Locator location, WebResource resource) {
+		VisitMap registry = getVisitor().getVisitMap();
+		return registry.addVisit(location, resource.getMetadata());
 	}
 	
 	protected void visitLater(ResourceMetadata metadata) {

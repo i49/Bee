@@ -14,7 +14,7 @@ public interface Visitor {
 	
 	boolean hasDone(Locator location);
 	
-	void addDone(ResourceRecord record);
+	void addDone(Visit record);
 
 	Trip getCurrentTrip();
 
@@ -24,7 +24,7 @@ public interface Visitor {
 	
 	Hive getHive();
 	
-	ResourceRegistry getRegistry();
+	VisitMap getVisitMap();
 
 	void notifyEvent(Consumer<BeeEventListener> consumer);
 }
