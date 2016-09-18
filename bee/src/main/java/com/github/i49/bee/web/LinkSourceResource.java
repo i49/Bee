@@ -3,7 +3,7 @@ package com.github.i49.bee.web;
 import java.util.Collection;
 import java.util.Map;
 
-public interface LinkProvidingResource extends WebResource {
+public interface LinkSourceResource extends WebResource {
 	
 	Collection<Link> getLinks();
 	

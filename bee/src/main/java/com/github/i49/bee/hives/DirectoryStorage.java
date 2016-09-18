@@ -21,14 +21,16 @@ public class DirectoryStorage implements Storage {
 	}
 	
 	@Override
-	public void open(Path path, boolean clean) throws IOException {
+	public void open(Path path, boolean clean) throws HiveException {
 		this.root = path;
-		if (Files.exists(path) && clean) { 
-			log.debug("Cleaning output directory: " + path);
-			Directories.remove(this.root);
+		try {
+			if (clean) {
+				cleanStorage();
+			}
+			createStorage();
+		} catch (IOException e) {
+			throw new StorageCreationException(this.root, e);
 		}
-		log.debug("Creating output directory: " + path);
-		Files.createDirectories(this.root);
 	}
 
 	@Override
@@ -41,16 +43,30 @@ public class DirectoryStorage implements Storage {
 	}
 	
 	@Override
-	public void saveAt(String path, byte[] content, FileTime lastModified) throws IOException {
+	public void saveAt(String path, byte[] content, FileTime lastModified) throws HiveException {
 		Path fullpath = this.root.resolve(path.substring(1)).toAbsolutePath();
-		Files.createDirectories(fullpath.getParent());
-		try (OutputStream stream = Files.newOutputStream(fullpath)) {
-			if (content != null) {
-				stream.write(content);
+		try {
+			Files.createDirectories(fullpath.getParent());
+			try (OutputStream stream = Files.newOutputStream(fullpath)) {
+				if (content != null) {
+					stream.write(content);
+				}
 			}
+			Files.setLastModifiedTime(fullpath, lastModified);
 		} catch (IOException e) {
-			throw e;
+			throw new ContentWriteException(fullpath, e);
 		}
-		Files.setLastModifiedTime(fullpath, lastModified);
+	}
+	
+	protected void cleanStorage() throws IOException {
+		if (Files.exists(this.root)) {
+			log.debug("Cleaning output directory: " + this.root);
+			Directories.remove(this.root);
+		}
+	}
+	
+	protected void createStorage() throws IOException {
+		log.debug("Creating output directory: " + this.root);
+		Files.createDirectories(this.root);
 	}
 }

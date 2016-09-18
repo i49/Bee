@@ -1,6 +1,5 @@
 package com.github.i49.bee.hives;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -18,7 +17,7 @@ public interface Hive extends AutoCloseable {
 	
 	void setStorage(Storage storage);
 	
-	void open() throws IOException;
+	void open() throws HiveException;
 	
-	void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException;
+	void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws HiveException;
 }

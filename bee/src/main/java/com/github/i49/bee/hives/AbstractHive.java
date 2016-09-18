@@ -10,7 +10,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.github.i49.bee.web.LinkProvidingResource;
+import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.ResourceSerializer;
@@ -53,7 +53,7 @@ public abstract class AbstractHive implements Hive {
 	}
 	
 	@Override
-	public void open() throws IOException {
+	public void open() throws HiveException {
 		if (this.layout == null) {
 			this.layout = createDefaultLayout();
 		}
@@ -75,10 +75,10 @@ public abstract class AbstractHive implements Hive {
 	}
 
 	@Override
-	public void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException {
+	public void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws HiveException {
 		String newLocation = this.layout.mapPath(resource.getMetadata().getLocation());
-		if (resource instanceof LinkProvidingResource && links != null && !links.isEmpty()) {
-			rewriteResource((LinkProvidingResource)resource, newLocation, links);
+		if (resource instanceof LinkSourceResource && links != null && !links.isEmpty()) {
+			rewriteResource((LinkSourceResource)resource, newLocation, links);
 		}
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
@@ -89,7 +89,7 @@ public abstract class AbstractHive implements Hive {
 		return resource.getBytes(this.serializer);
 	}
 	
-	protected void rewriteResource(LinkProvidingResource resource, String newLocation, Map<Locator, ResourceMetadata> links) {
+	protected void rewriteResource(LinkSourceResource resource, String newLocation, Map<Locator, ResourceMetadata> links) {
 		Map<Locator, Locator> map = createRewriteMap(newLocation, links);
 		resource.rewriteLinks(map);
 	}

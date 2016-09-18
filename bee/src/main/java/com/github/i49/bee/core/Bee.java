@@ -1,6 +1,5 @@
 package com.github.i49.bee.core;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -15,6 +14,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
+import com.github.i49.bee.hives.HiveException;
 import com.github.i49.bee.hives.Storage;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebDownloader;
@@ -52,12 +52,12 @@ public class Bee {
 		return handlers;
 	}
 	
-	public void launch() {
+	public void launch() throws BeeException {
 		log.debug("Bee launched.");
 		try {
 			makeAllTrips();
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new BeeException(e);
 		}
 	}
 	
@@ -77,7 +77,7 @@ public class Bee {
 		}
 	}
 	
-	protected Hive openHive() throws IOException {
+	protected Hive openHive() throws HiveException {
 		if (this.hive == null) {
 			this.hive = new DefaultHive();
 		}
@@ -85,7 +85,7 @@ public class Bee {
 		return this.hive;
 	}
 
-	protected WebDownloader createWebDownloader(Hive hive) throws IOException {
+	protected WebDownloader createWebDownloader(Hive hive) {
 		Path pathToCache = getCacheDirectoryForHive(hive);
 		this.downloader = new CachingWebDownloader(pathToCache);
 		return downloader;

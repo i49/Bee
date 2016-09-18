@@ -1,16 +1,15 @@
 package com.github.i49.bee.core;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.github.i49.bee.hives.HiveException;
 import com.github.i49.bee.web.Link;
-import com.github.i49.bee.web.LinkProvidingResource;
+import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebException;
@@ -124,10 +123,10 @@ public class ResourceTask extends Task {
 	}
 
 	protected void parseResource() {
-		if (!(this.resource instanceof LinkProvidingResource)) {
+		if (!(this.resource instanceof LinkSourceResource)) {
 			return;
 		}
-		LinkProvidingResource resource = (LinkProvidingResource)this.resource;
+		LinkSourceResource resource = (LinkSourceResource)this.resource;
 		Collection<Link> links = resource.getLinks();
 		for (Link link : filterExternalResourceLinks(links)) {
 			Locator location = link.getLocation();
@@ -163,7 +162,7 @@ public class ResourceTask extends Task {
 			visit.setStored();
 			getVisitor().addDone(visit);
 			notifyEvent(x->x.handleStoreCompleted(getDistance(), getLevel(), getVisit()));
-		} catch (IOException e) {
+		} catch (HiveException e) {
 			notifyEvent(x->x.handleStoreFailed(getDistance(), getLevel(), getVisit(), e));
 		}
 	}
