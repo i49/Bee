@@ -13,9 +13,11 @@ public class Locator {
 	private static final Log log = LogFactory.getLog(Locator.class);
 	
 	private final URI uri;
+	private final Scheme scheme;
 	
 	protected Locator(URI uri) {
 		this.uri = uri;
+		this.scheme = Scheme.of(uri.getScheme());
 	}
 	
 	public String getScheme() {
@@ -32,6 +34,14 @@ public class Locator {
 	
 	public int getPort() {
 		return uri.getPort();
+	}
+	
+	public int guessPort() {
+		int port = getPort();
+		if (port == -1 && this.scheme != null) {
+			port = this.scheme.getDefaultPort();
+		}
+		return port;
 	}
 	
 	public String getPath() {

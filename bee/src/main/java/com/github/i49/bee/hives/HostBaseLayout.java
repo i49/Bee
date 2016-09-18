@@ -14,7 +14,7 @@ public class HostBaseLayout extends AbstractLayout {
 	protected String createPrefix(Locator location) {
 		StringBuilder builder = new StringBuilder("/");
 		builder.append(location.getHost()).append("/");
-		final int port = location.getPort();
+		final int port = location.guessPort();
 		if (port >= 0) {
 			builder.append(port);
 		} else {
