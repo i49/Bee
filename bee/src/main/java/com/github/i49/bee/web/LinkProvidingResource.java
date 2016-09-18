@@ -5,9 +5,7 @@ import java.util.Map;
 
 public interface LinkProvidingResource extends WebResource {
 	
-	Collection<Link> getDependencyLinks();
-	
-	Collection<Link> getExternalLinks();
+	Collection<Link> getLinks();
 	
 	void rewriteLinks(Map<Locator, Locator> map);
 }

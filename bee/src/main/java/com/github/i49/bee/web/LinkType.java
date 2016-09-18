@@ -27,6 +27,10 @@ public enum LinkType {
 		if (text == null) {
 			return null;
 		}
-		return valueOf(text.replace("-", "_").toUpperCase());
+		try {
+			return valueOf(text.replace("-", "_").toUpperCase());
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
 }

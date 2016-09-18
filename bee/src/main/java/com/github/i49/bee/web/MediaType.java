@@ -59,6 +59,9 @@ public enum MediaType {
 	}
 
 	public static MediaType of(String value) {
+		if (value == null) {
+			return null;
+		}
 		return map.get(value.trim());
 	}
 	

@@ -2,9 +2,12 @@ package com.github.i49.bee.core;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkProvidingResource;
@@ -125,13 +128,14 @@ public class ResourceTask extends Task {
 			return;
 		}
 		LinkProvidingResource resource = (LinkProvidingResource)this.resource;
-		for (Link link : resource.getDependencyLinks()) {
+		Collection<Link> links = resource.getLinks();
+		for (Link link : filterExternalResourceLinks(links)) {
 			Locator location = link.getLocation();
 			if (getVisitor().canVisit(location)) {
 				addSubtask(new ExternalResourceTask(location, getDistance() + 1, getLevel() + 1));
 			}
 		}
-		for (Link link : resource.getExternalLinks()) {
+		for (Link link : filterHyperlinks(links)) {
 			final Locator location = link.getLocation();
 			final int distance = getDistance() + 1;
 			if (getVisitor().canVisit(location, distance)) {
@@ -140,6 +144,14 @@ public class ResourceTask extends Task {
 		}
 	}
 	
+	protected List<Link> filterExternalResourceLinks(Collection<Link> links) {
+		return links.stream().filter(getVisitor().getExternalResourceLinkPredicate()).collect(Collectors.toList());
+	}
+	
+	protected List<Link> filterHyperlinks(Collection<Link> links) {
+		return links.stream().filter(getVisitor().getHyperlinkPredicate()).collect(Collectors.toList());
+	}
+
 	protected void storeResource() {
 		Visit visit = getVisit();
 		if (visit.isStored()) {

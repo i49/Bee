@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -18,6 +19,7 @@ import com.github.i49.bee.hives.Storage;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.CachingWebDownloader;
+import com.github.i49.bee.web.Link;
 
 /**
  * Bee who visits web sites.
@@ -69,7 +71,7 @@ public class Bee {
 	protected void runTasks() {
 		for (Trip trip : this.trips) {
 			TripTask task = new TripTask(trip);
-			BeeAsVisitor visitor = createVisitor(trip.getDistanceLimit());
+			BeeAsVisitor visitor = createVisitor(trip);
 			task.setVisitor(visitor);
 			task.run();
 		}
@@ -102,8 +104,8 @@ public class Bee {
 		this.handlers.add(new DefaultReporter());
 	}
 	
-	protected BeeAsVisitor createVisitor(int distanceLimit) {
-		return new BeeAsVisitor(distanceLimit);
+	protected BeeAsVisitor createVisitor(Trip trip) {
+		return new BeeAsVisitor(trip);
 	}
 
 	/**
@@ -111,11 +113,11 @@ public class Bee {
 	 */
 	private class BeeAsVisitor implements Visitor {
 
-		private final int distanceLimit;
+		private final Trip trip;
 		private final Set<Visit> done = new HashSet<>();
 		
-		public BeeAsVisitor(int distanceLimit) {
-			this.distanceLimit = distanceLimit;
+		public BeeAsVisitor(Trip trip) {
+			this.trip = trip;
 		}
 		
 		@Override
@@ -130,7 +132,7 @@ public class Bee {
 		
 		@Override
 		public boolean canVisit(Locator location, int distance) {
-			if (distance > this.distanceLimit) {
+			if (distance > trip.getDistanceLimit()) {
 				return false;
 			}
 			return canVisit(location);
@@ -167,6 +169,16 @@ public class Bee {
 			return visitMap;
 		}
 
+		@Override
+		public Predicate<Link> getExternalResourceLinkPredicate() {
+			return trip.getExternalResourceLinkPredicate();
+		}
+		
+		@Override
+		public Predicate<Link> getHyperlinkPredicate() {
+			return trip.getHyperlinkPredicate();
+		}
+		
 		@Override
 		public void notifyEvent(Consumer<BeeEventHandler> consumer) {
 			handlers.stream().forEach(consumer);

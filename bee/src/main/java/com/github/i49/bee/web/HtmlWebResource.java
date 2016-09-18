@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,23 +34,12 @@ public class HtmlWebResource extends AbstractWebResource implements LinkProvidin
 	}
 	
 	@Override
-	public Collection<Link> getDependencyLinks() {
-		LinkedHashSet<Link> links = new LinkedHashSet<>();
-		collectStylesheets(links);
-		collectScripts(links);
-		collectImages(links);
-		return links;
-	}
-
-	@Override
-	public Collection<Link> getExternalLinks() {
-		LinkedHashSet<Link> links = new LinkedHashSet<>();
-		for (Element e : findElementsByName("a")) {
-			Link link = parseLink(e, "href", null);
-			if (link != null) {
-				links.add(link);
-			}
-		}
+	public Collection<Link> getLinks() {
+		List<Link> links = new ArrayList<>();
+		collectLinks("link", "href", links);
+		collectLinks("script", "src", links);
+		collectLinks("img", "src", links);
+		collectLinks("a", "href", links);
 		return links;
 	}
 
@@ -68,58 +59,54 @@ public class HtmlWebResource extends AbstractWebResource implements LinkProvidin
 		}
 		return result;
 	}
+	
+	protected void processElement(String name, Consumer<Element> action) {
+		NodeList nodes = this.document.getElementsByTagName(name);
+		for (int i = 0; i < nodes.getLength(); i++) {
+			action.accept((Element)nodes.item(i));
+		}
+	}
 
-	protected void collectStylesheets(Collection<Link> links) {
-		for (Element e : findElementsByName("link")) {
-			if ("stylesheet".equals(e.getAttribute("rel"))) {
-				Link link = parseLink(e, "href", MediaType.TEXT_CSS);
-				if (link != null) {
-					links.add(link);
-				}
+	protected void collectLinks(String element, String attribute, Collection<Link> result) {
+		processElement(element, e->{
+			Locator location = parseLink(e.getAttribute(attribute));
+			if (location == null) {
+				return;
 			}
-		}
-	}
-	
-	protected void collectScripts(Collection<Link> links) {
-		for (Element e : findElementsByName("script")) {
-			Link link = parseLink(e, "src", MediaType.TEXT_JAVASCRIPT);
+			Set<LinkType> linkTypes = parseRelation(e.getAttribute("rel"));
+			MediaType mediaType = MediaType.of(e.getAttribute("type"));
+			Link link = Link.create(location, element, linkTypes, mediaType);
 			if (link != null) {
-				MediaType type = link.getMediaType();
-				if (type == MediaType.TEXT_JAVASCRIPT || type == MediaType.APPLICATION_JAVASCRIPT) {
-					links.add(link);	
-				}
+				result.add(link);
 			}
-		}
+		});
 	}
 	
-	protected void collectImages(Collection<Link> links) {
-		for (Element e : findElementsByName("img")) {
-			Link link = parseLink(e, "src", null);
-			if (link != null) {
-				links.add(link);
-			}
-		}
-	}
-	
-	protected Link parseLink(Element e, String attributeName, MediaType defaultType) {
-		MediaType type = parseLinkType(e, defaultType);
-		String value = e.getAttribute(attributeName);
+	protected Locator parseLink(String value) {
 		if (value == null) {
 			return null;
 		}
 		String[] parts = value.split("#");
-		if (parts.length >= 1) {
-			return Link.create(resolve(parts[0]), type);
-		} else {
-			return null;
+		if (parts.length == 0) {
+			return null;	
 		}
+		return resolve(parts[0]);
 	}
 	
-	protected MediaType parseLinkType(Element e, MediaType defaultType) {
-		final String value = e.getAttribute("type");
-		return (value != null) ? MediaType.of(value) : defaultType;
+	protected Set<LinkType> parseRelation(String rel) {
+		if (rel == null || rel.isEmpty()) {
+			return null;
+		}
+		Set<LinkType> types = new LinkedHashSet<>();
+		for (String value : rel.split("\\s+")) {
+			LinkType type = LinkType.of(value);
+			if (type != null) {
+				types.add(type);
+			}
+		}
+		return types;
 	}
-
+	
 	protected Locator resolve(String value) {
 		value = value.trim();
 		Locator base = getMetadata().getLocation();
