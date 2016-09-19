@@ -20,4 +20,6 @@ public interface Hive extends AutoCloseable {
 	void open() throws HiveException;
 	
 	void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws HiveException;
+	
+	void link() throws HiveException;
 }

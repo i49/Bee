@@ -2,13 +2,13 @@ package com.github.i49.bee.hives;
 
 import java.nio.file.Path;
 
-public class ContentWriteException extends HiveException {
+public class StorageWriteException extends HiveException {
 
 	private static final long serialVersionUID = 1L;
 
 	private final Path path;
 	
-	public ContentWriteException(Path path, Throwable cause) {
+	public StorageWriteException(Path path, Throwable cause) {
 		super(cause);
 		this.path = path;
 	}
@@ -19,6 +19,6 @@ public class ContentWriteException extends HiveException {
 	
 	@Override
 	public String getMessage() {
-		return "Failed to write content to " + getPath().toString();
+		return "Failed to write content into storage at " + getPath().toString();
 	}
 }

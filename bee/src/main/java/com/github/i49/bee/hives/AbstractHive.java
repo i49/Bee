@@ -26,7 +26,8 @@ public abstract class AbstractHive implements Hive {
 	private Layout layout;
 	private Storage storage;
 	private ResourceSerializer serializer = new DefaultResourceSerializer();
-
+	private final Map<String, ResourceMetadata> resourcesToLink = new HashMap<>();
+	
 	protected AbstractHive() {
 		this.basePath = Paths.get(DEFAULT_BASE_PATH).toAbsolutePath();
 		this.clean = true;
@@ -82,7 +83,17 @@ public abstract class AbstractHive implements Hive {
 		}
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
-		this.storage.saveAt(newLocation, bytes, lastModified);
+		this.storage.addItem(newLocation, bytes, lastModified);
+		if (links != null && !links.isEmpty()) {
+			linkLater(newLocation, resource.getMetadata());
+		}
+	}
+
+	@Override
+	public void link() throws HiveException {
+		this.storage.traverseForUpdate(path->{
+			return this.resourcesToLink.containsKey(path);
+		});
 	}
 	
 	protected byte[] serializeResource(WebResource resource) {
@@ -105,6 +116,10 @@ public abstract class AbstractHive implements Hive {
 			map.put(link, relativeLocation);
 		}
 		return map;
+	}
+	
+	protected void linkLater(String path, ResourceMetadata metadata) {
+		this.resourcesToLink.put(path, metadata);
 	}
 
 	protected abstract Layout createDefaultLayout();

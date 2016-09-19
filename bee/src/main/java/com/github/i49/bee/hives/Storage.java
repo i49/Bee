@@ -3,6 +3,7 @@ package com.github.i49.bee.hives;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.function.Predicate;
 
 public interface Storage {
 	
@@ -12,5 +13,7 @@ public interface Storage {
 
 	boolean isDirectory();
 	
-	void saveAt(String path, byte[] content, FileTime lastModified) throws HiveException;
+	void addItem(String path, byte[] content, FileTime lastModified) throws HiveException;
+	
+	void traverseForUpdate(Predicate<String> predicate) throws HiveException;
 }

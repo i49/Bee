@@ -56,6 +56,7 @@ public class Bee {
 		log.debug("Bee launched.");
 		try {
 			makeAllTrips();
+			rewriteLinks();
 		} catch (Exception e) {
 			throw new BeeException(e);
 		}
@@ -75,6 +76,10 @@ public class Bee {
 			task.setVisitor(visitor);
 			task.run();
 		}
+	}
+	
+	protected void rewriteLinks() throws HiveException {
+		this.hive.link();
 	}
 	
 	protected Hive openHive() throws HiveException {

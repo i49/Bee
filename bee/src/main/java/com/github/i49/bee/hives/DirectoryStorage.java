@@ -2,9 +2,14 @@ package com.github.i49.bee.hives;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +48,7 @@ public class DirectoryStorage implements Storage {
 	}
 	
 	@Override
-	public void saveAt(String path, byte[] content, FileTime lastModified) throws HiveException {
+	public void addItem(String path, byte[] content, FileTime lastModified) throws HiveException {
 		Path fullpath = this.root.resolve(path.substring(1)).toAbsolutePath();
 		try {
 			Files.createDirectories(fullpath.getParent());
@@ -54,7 +59,16 @@ public class DirectoryStorage implements Storage {
 			}
 			Files.setLastModifiedTime(fullpath, lastModified);
 		} catch (IOException e) {
-			throw new ContentWriteException(fullpath, e);
+			throw new StorageWriteException(fullpath, e);
+		}
+	}
+	
+	@Override
+	public void traverseForUpdate(Predicate<String> predicate) throws HiveException {
+		try (Stream<Path> stream = Files.walk(this.root)) {
+			stream.filter(p->predicate.test(pathToString(p))).forEach(x->updateItem(x));
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -68,5 +82,14 @@ public class DirectoryStorage implements Storage {
 	protected void createStorage() throws IOException {
 		log.debug("Creating output directory: " + this.root);
 		Files.createDirectories(this.root);
+	}
+
+	protected void updateItem(Path path) {
+		log.debug("update: " + path);
+	}
+
+	private String pathToString(Path path) {
+		Path relative = this.root.relativize(path);
+		return  "/" + relative.toString().replaceAll("\\\\", "/");
 	}
 }
