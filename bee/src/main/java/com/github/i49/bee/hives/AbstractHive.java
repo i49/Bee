@@ -1,17 +1,24 @@
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.github.i49.bee.web.HtmlWebResource;
+import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.MediaType;
+import com.github.i49.bee.web.WebContentException;
 import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
@@ -20,17 +27,19 @@ public abstract class AbstractHive implements Hive {
 	
 	private static final Log log = LogFactory.getLog(AbstractHive.class);
 	private static final String DEFAULT_BASE_PATH = "hive";
+	private static final Charset DEFAULT_ENCODING = StandardCharsets.UTF_8;
 	
 	private Path basePath;
 	private boolean clean;
+	private Charset encoding;
 	private Layout layout;
 	private Storage storage;
-	private ResourceSerializer serializer = new DefaultResourceSerializer();
-	private final Map<String, ResourceMetadata> resourcesToLink = new HashMap<>();
+	private ResourceSerializer serializer;
 	
 	protected AbstractHive() {
 		this.basePath = Paths.get(DEFAULT_BASE_PATH).toAbsolutePath();
 		this.clean = true;
+		this.encoding = DEFAULT_ENCODING;
 	}
 
 	@Override
@@ -54,7 +63,7 @@ public abstract class AbstractHive implements Hive {
 	}
 	
 	@Override
-	public void open() throws HiveException {
+	public void open() throws IOException {
 		if (this.layout == null) {
 			this.layout = createDefaultLayout();
 		}
@@ -62,6 +71,7 @@ public abstract class AbstractHive implements Hive {
 			this.storage = createDefaultStorage();
 		}
 		this.storage.open(this.basePath, this.clean);
+		this.serializer = new DefaultResourceSerializer(this.encoding);
 	}
 
 	@Override
@@ -76,28 +86,44 @@ public abstract class AbstractHive implements Hive {
 	}
 
 	@Override
-	public void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws HiveException {
+	public String store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException {
 		String newLocation = this.layout.mapPath(resource.getMetadata().getLocation());
 		if (resource instanceof LinkSourceResource && links != null && !links.isEmpty()) {
 			rewriteResource((LinkSourceResource)resource, newLocation, links);
 		}
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
-		this.storage.addItem(newLocation, bytes, lastModified);
-		if (links != null && !links.isEmpty()) {
-			linkLater(newLocation, resource.getMetadata());
-		}
+		this.storage.write(newLocation, bytes, lastModified);
+		return newLocation;
 	}
 
 	@Override
-	public void link() throws HiveException {
-		this.storage.traverseForUpdate(path->{
-			return this.resourcesToLink.containsKey(path);
-		});
+	public void updateLinks(String path, ResourceMetadata metadata) throws IOException, WebContentException {
+		if (path == null) {
+			throw new IllegalArgumentException("path is null");
+		}
+		MediaType mediaType = metadata.getMediaType();
+		if (mediaType != MediaType.TEXT_HTML && mediaType != MediaType.APPLICATION_XHTML_XML) {
+			throw new IllegalStateException("Invalid media type " + mediaType);
+		}
+		HtmlWebResource resource = deserializeResource(metadata, this.storage.read(path));
+		FileTime lastModified = this.storage.getLastModifiedTime(path);
+		rewriteResource(resource);
+		byte[] bytes = serializeResource(resource);
+		this.storage.write(path, bytes, lastModified);
+	}
+
+	protected void rewriteResource(LinkSourceResource resource) {
+		Collection<Link> links = resource.getLinks();
 	}
 	
 	protected byte[] serializeResource(WebResource resource) {
 		return resource.getBytes(this.serializer);
+	}
+	
+	protected HtmlWebResource deserializeResource(ResourceMetadata metadata, byte[] content) throws WebContentException {
+		Charset encoding = this.serializer.getEncoding();
+		return HtmlWebResource.create(metadata, content, encoding.name());
 	}
 	
 	protected void rewriteResource(LinkSourceResource resource, String newLocation, Map<Locator, ResourceMetadata> links) {
@@ -118,10 +144,6 @@ public abstract class AbstractHive implements Hive {
 		return map;
 	}
 	
-	protected void linkLater(String path, ResourceMetadata metadata) {
-		this.resourcesToLink.put(path, metadata);
-	}
-
 	protected abstract Layout createDefaultLayout();
 
 	protected abstract Storage createDefaultStorage();

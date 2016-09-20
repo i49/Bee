@@ -1,10 +1,12 @@
 package com.github.i49.bee.hives;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
+import com.github.i49.bee.web.WebContentException;
 import com.github.i49.bee.web.WebResource;
 
 public interface Hive extends AutoCloseable {
@@ -17,9 +19,9 @@ public interface Hive extends AutoCloseable {
 	
 	void setStorage(Storage storage);
 	
-	void open() throws HiveException;
+	void open() throws IOException;
 	
-	void store(WebResource resource, Map<Locator, ResourceMetadata> links) throws HiveException;
+	String store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException;
 	
-	void link() throws HiveException;
+	void updateLinks(String path, ResourceMetadata metadata) throws IOException, WebContentException;
 }

@@ -3,17 +3,18 @@ package com.github.i49.bee.hives;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.util.function.Predicate;
 
 public interface Storage {
 	
-	void open(Path path, boolean clean) throws HiveException;
+	void open(Path path, boolean clean) throws IOException;
 	
 	void close() throws IOException;
 
 	boolean isDirectory();
 	
-	void addItem(String path, byte[] content, FileTime lastModified) throws HiveException;
+	FileTime getLastModifiedTime(String path) throws IOException;
+
+	byte[] read(String path) throws IOException;
 	
-	void traverseForUpdate(Predicate<String> predicate) throws HiveException;
+	void write(String path, byte[] content, FileTime lastModified) throws IOException;
 }

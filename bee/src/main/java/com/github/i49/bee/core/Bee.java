@@ -1,5 +1,6 @@
 package com.github.i49.bee.core;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -79,10 +80,9 @@ public class Bee {
 	}
 	
 	protected void rewriteLinks() throws HiveException {
-		this.hive.link();
 	}
 	
-	protected Hive openHive() throws HiveException {
+	protected Hive openHive() throws IOException {
 		if (this.hive == null) {
 			this.hive = new DefaultHive();
 		}

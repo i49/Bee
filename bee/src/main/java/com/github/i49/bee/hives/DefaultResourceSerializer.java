@@ -1,6 +1,7 @@
 package com.github.i49.bee.hives;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Source;
@@ -19,21 +20,26 @@ public class DefaultResourceSerializer implements ResourceSerializer {
 
 	private final TransformerFactory transformFactory; 
 	private final Transformer transformer;
+	private final Charset encoding;
 	
-	private static final String DEFAULT_ENCODING = "UTF-8";
-	
-	public DefaultResourceSerializer() {
+	public DefaultResourceSerializer(Charset encoding) {
 		this.transformFactory = TransformerFactory.newInstance();
 		Transformer transformer = null;
 		try {
 			transformer = transformFactory.newTransformer();
-			transformer.setOutputProperty(OutputKeys.ENCODING, DEFAULT_ENCODING);
+			transformer.setOutputProperty(OutputKeys.ENCODING, encoding.name());
 			transformer.setOutputProperty(OutputKeys.METHOD, "html");
 			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 		} catch (TransformerConfigurationException e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 		this.transformer = transformer;
+		this.encoding = encoding;
+	}
+
+	@Override
+	public Charset getEncoding() {
+		return encoding;
 	}
 
 	@Override
@@ -49,5 +55,4 @@ public class DefaultResourceSerializer implements ResourceSerializer {
 			return null;
 		}
 	}
-
 }

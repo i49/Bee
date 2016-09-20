@@ -152,7 +152,7 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSourceRe
 		return newValue;
 	}
 	
-	public static HtmlWebResource create(ResourceMetadata metadata, byte[] content, String defaultEncoding) throws ResourceContentException {
+	public static HtmlWebResource create(ResourceMetadata metadata, byte[] content, String defaultEncoding) throws WebContentException {
 		HtmlDocumentBuilder builder = new HtmlDocumentBuilder();
 		InputSource source = new InputSource(new ByteArrayInputStream(content));
 		String encoding = metadata.getContentEncoding();
@@ -161,7 +161,7 @@ public class HtmlWebResource extends AbstractWebResource implements LinkSourceRe
 			Document document = builder.parse(source);
 			return new HtmlWebResource(metadata, document);
 		} catch (Exception e) {
-			throw new ResourceContentException(metadata.getLocation(), e);
+			throw new WebContentException(metadata.getLocation(), e);
 		}
 	}
 

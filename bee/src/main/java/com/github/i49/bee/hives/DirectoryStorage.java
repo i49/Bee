@@ -1,15 +1,12 @@
+
 package com.github.i49.bee.hives;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.FileVisitResult;
+import java.nio.file.AccessMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,16 +23,12 @@ public class DirectoryStorage implements Storage {
 	}
 	
 	@Override
-	public void open(Path path, boolean clean) throws HiveException {
+	public void open(Path path, boolean clean) throws IOException {
 		this.root = path;
-		try {
-			if (clean) {
-				cleanStorage();
-			}
-			createStorage();
-		} catch (IOException e) {
-			throw new StorageCreationException(this.root, e);
+		if (clean) {
+			cleanStorage();
 		}
+		createStorage();
 	}
 
 	@Override
@@ -48,8 +41,22 @@ public class DirectoryStorage implements Storage {
 	}
 	
 	@Override
-	public void addItem(String path, byte[] content, FileTime lastModified) throws HiveException {
-		Path fullpath = this.root.resolve(path.substring(1)).toAbsolutePath();
+	public FileTime getLastModifiedTime(String path) throws IOException {
+		return Files.getLastModifiedTime(resolve(path));
+	}
+
+	@Override
+	public byte[] read(String path) throws IOException {
+		try {
+			return Files.readAllBytes(resolve(path));
+		} catch (IOException e) {
+			throw new StorageIOException(path, AccessMode.READ, e);
+		}
+	}
+	
+	@Override
+	public void write(String path, byte[] content, FileTime lastModified) throws IOException {
+		Path fullpath = resolve(path);
 		try {
 			Files.createDirectories(fullpath.getParent());
 			try (OutputStream stream = Files.newOutputStream(fullpath)) {
@@ -59,16 +66,7 @@ public class DirectoryStorage implements Storage {
 			}
 			Files.setLastModifiedTime(fullpath, lastModified);
 		} catch (IOException e) {
-			throw new StorageWriteException(fullpath, e);
-		}
-	}
-	
-	@Override
-	public void traverseForUpdate(Predicate<String> predicate) throws HiveException {
-		try (Stream<Path> stream = Files.walk(this.root)) {
-			stream.filter(p->predicate.test(pathToString(p))).forEach(x->updateItem(x));
-		} catch (IOException e) {
-			e.printStackTrace();
+			throw new StorageIOException(path, AccessMode.WRITE, e);
 		}
 	}
 	
@@ -83,13 +81,11 @@ public class DirectoryStorage implements Storage {
 		log.debug("Creating output directory: " + this.root);
 		Files.createDirectories(this.root);
 	}
-
-	protected void updateItem(Path path) {
-		log.debug("update: " + path);
-	}
-
-	private String pathToString(Path path) {
-		Path relative = this.root.relativize(path);
-		return  "/" + relative.toString().replaceAll("\\\\", "/");
+	
+	protected Path resolve(String path) {
+		if (!path.startsWith("/")) {
+			throw new IllegalArgumentException("Invalid path: " + path);
+		}
+		return this.root.resolve(path.substring(1)).toAbsolutePath();
 	}
 }

@@ -1,5 +1,6 @@
 package com.github.i49.bee.core;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -162,7 +163,7 @@ public class ResourceTask extends Task {
 			visit.setStored();
 			getVisitor().addDone(visit);
 			notifyEvent(x->x.handleStoreCompleted(getDistance(), getLevel(), getVisit()));
-		} catch (HiveException e) {
+		} catch (IOException e) {
 			notifyEvent(x->x.handleStoreFailed(getDistance(), getLevel(), getVisit(), e));
 		}
 	}
