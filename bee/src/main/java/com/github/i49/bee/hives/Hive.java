@@ -5,8 +5,6 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.ResourceMetadata;
-import com.github.i49.bee.web.WebContentException;
 import com.github.i49.bee.web.WebResource;
 
 public interface Hive extends AutoCloseable {
@@ -21,7 +19,7 @@ public interface Hive extends AutoCloseable {
 	
 	void open() throws IOException;
 	
-	String store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException;
+	String store(WebResource resource) throws IOException;
 	
-	void updateLinks(String path, ResourceMetadata metadata) throws IOException, WebContentException;
+	Linker createLinker(Map<Locator, Locator> redirections);
 }

@@ -6,20 +6,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.github.i49.bee.web.HtmlWebResource;
-import com.github.i49.bee.web.Link;
-import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.MediaType;
-import com.github.i49.bee.web.WebContentException;
-import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
@@ -86,62 +78,21 @@ public abstract class AbstractHive implements Hive {
 	}
 
 	@Override
-	public String store(WebResource resource, Map<Locator, ResourceMetadata> links) throws IOException {
-		String newLocation = this.layout.mapPath(resource.getMetadata().getLocation());
-		if (resource instanceof LinkSourceResource && links != null && !links.isEmpty()) {
-			rewriteResource((LinkSourceResource)resource, newLocation, links);
-		}
+	public String store(WebResource resource) throws IOException {
+		final String localPath = this.layout.mapPath(resource.getMetadata().getLocation());
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
-		this.storage.write(newLocation, bytes, lastModified);
-		return newLocation;
+		this.storage.write(localPath, bytes, lastModified);
+		return localPath;
 	}
 
 	@Override
-	public void updateLinks(String path, ResourceMetadata metadata) throws IOException, WebContentException {
-		if (path == null) {
-			throw new IllegalArgumentException("path is null");
-		}
-		MediaType mediaType = metadata.getMediaType();
-		if (mediaType != MediaType.TEXT_HTML && mediaType != MediaType.APPLICATION_XHTML_XML) {
-			throw new IllegalStateException("Invalid media type " + mediaType);
-		}
-		HtmlWebResource resource = deserializeResource(metadata, this.storage.read(path));
-		FileTime lastModified = this.storage.getLastModifiedTime(path);
-		rewriteResource(resource);
-		byte[] bytes = serializeResource(resource);
-		this.storage.write(path, bytes, lastModified);
-	}
+	public Linker createLinker(Map<Locator, Locator> redirections) {
+		return new BasicLinker(redirections, this.layout, this.storage, this.serializer);
+	};
 
-	protected void rewriteResource(LinkSourceResource resource) {
-		Collection<Link> links = resource.getLinks();
-	}
-	
-	protected byte[] serializeResource(WebResource resource) {
+	private byte[] serializeResource(WebResource resource) {
 		return resource.getBytes(this.serializer);
-	}
-	
-	protected HtmlWebResource deserializeResource(ResourceMetadata metadata, byte[] content) throws WebContentException {
-		Charset encoding = this.serializer.getEncoding();
-		return HtmlWebResource.create(metadata, content, encoding.name());
-	}
-	
-	protected void rewriteResource(LinkSourceResource resource, String newLocation, Map<Locator, ResourceMetadata> links) {
-		Map<Locator, Locator> map = createRewriteMap(newLocation, links);
-		resource.rewriteLinks(map);
-	}
-	
-	protected Map<Locator, Locator> createRewriteMap(String newLocation, Map<Locator, ResourceMetadata> links) {
-		Locator baseLocation = Locator.pathOf(newLocation).getParent();
-		Map<Locator, Locator> map = new HashMap<>();
-		for (Locator link  : links.keySet()) {
-			final Locator target = links.get(link).getLocation();
-			final String mappedTarget = this.layout.mapPath(target);
-			Locator targetLocation = Locator.pathOf(mappedTarget);
-			Locator relativeLocation = baseLocation.relativize(targetLocation);
-			map.put(link, relativeLocation);
-		}
-		return map;
 	}
 	
 	protected abstract Layout createDefaultLayout();

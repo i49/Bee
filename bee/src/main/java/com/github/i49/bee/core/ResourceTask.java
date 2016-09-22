@@ -159,7 +159,7 @@ public class ResourceTask extends Task {
 		}
 		try {
 			notifyEvent(x->x.handleStoreStarted(getDistance(), getLevel(), getVisit()));
-			getVisitor().getHive().store(getResource(), this.links);
+			getVisitor().getHive().store(getResource());
 			visit.setStored();
 			getVisitor().addDone(visit);
 			notifyEvent(x->x.handleStoreCompleted(getDistance(), getLevel(), getVisit()));
