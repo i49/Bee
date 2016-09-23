@@ -1,3 +1,4 @@
+
 package com.github.i49.bee.core;
 
 import java.io.IOException;
@@ -106,7 +107,7 @@ public class Bee {
 	}
 	
 	protected void addDefaultEventHandlers() {
-		this.handlers.add(new DefaultReporter());
+		this.handlers.add(new BasicConsoleLogger());
 	}
 	
 	protected BeeAsVisitor createVisitor(Trip trip) {
@@ -187,6 +188,33 @@ public class Bee {
 		@Override
 		public void notifyEvent(Consumer<BeeEventHandler> consumer) {
 			handlers.stream().forEach(consumer);
+		}
+	}
+	
+	private class BeeAsTripper extends Tripper {
+
+		public BeeAsTripper(Trip trip, WebDownloader downloader) {
+			super(trip, downloader);
+		}
+		
+		@Override
+		protected boolean canVisit(Locator location) {
+			for (WebSite site : sites) {
+				if (site.contains(location)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		@Override
+		protected Hive getHive() {
+			return hive;
+		}
+
+		@Override
+		protected void report(Consumer<BeeEventHandler> action) {
+			handlers.stream().forEach(action);
 		}
 	}
 }

@@ -1,17 +1,21 @@
 package com.github.i49.bee.core;
 
+import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.ResourceMetadata;
 
 public class Visit {
 
-	private final int id;
-	private final ResourceMetadata metadata;
+	private int id;
+	private ResourceMetadata metadata;
 	private boolean stored;
 	
 	public Visit(int id, ResourceMetadata metadata) {
 		this.id = id;
 		this.metadata = metadata;
 		this.stored = false;
+	}
+	
+	public Visit(Locator location, int distance) {
 	}
 
 	public int getId() {
@@ -28,5 +32,15 @@ public class Visit {
 	
 	public void setStored() {
 		this.stored = true;
+	}
+	
+	//
+	
+	public Locator getLocation() {
+		return null;
+	}
+	
+	public int getDistance() {
+		return 0;
 	}
 }

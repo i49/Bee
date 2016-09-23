@@ -8,9 +8,9 @@ import com.github.i49.bee.web.Locator;
 /**
  * Default implementation of console logger.
  */
-public class DefaultReporter implements BeeEventHandler {
+public class BasicConsoleLogger implements BeeEventHandler {
 
-	private static final Log log = LogFactory.getLog(DefaultReporter.class);
+	private static final Log log = LogFactory.getLog(BasicConsoleLogger.class);
 
 	@Override
 	public void handleDownloadStarted(int distance, int level, Locator location) {
