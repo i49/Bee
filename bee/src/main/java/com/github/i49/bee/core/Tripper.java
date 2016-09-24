@@ -12,7 +12,6 @@ import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebException;
 import com.github.i49.bee.web.WebResource;
@@ -74,17 +73,18 @@ public abstract class Tripper {
 	private WebResource retrieveResource(Visit v) throws WebException {
 		report(x->x.handleDownloadStarted(v));
 		WebResource resource = this.downloader.download(v.getLocation());
-		Found found = newFound(resource);
-		v.setFound(found);
+		Found f = newFound(resource);
+		v.setFound(f);
 		report(x->x.handleDownloadCompleted(v));
 		return resource;
 	}
 	
 	private void parseResource(Visit v, LinkSourceResource resource) {
+		Found f = v.getFound();
+		f.markAsLinkSource();
 		Collection<Link> links = resource.getLinks();
-		Found found = v.getFound();
-		found.setHyperlinks(filterLinks(links, getHyperlinkSelector()));
-		found.setExternalResourceLinks(filterLinks(links, getExternalResourceLinkSelector()));
+		f.setHyperlinks(filterLinks(links, getHyperlinkSelector()));
+		f.setExternalResourceLinks(filterLinks(links, getExternalResourceLinkSelector()));
 	}
 	
 	private void storeResource(Visit v, WebResource resource) throws IOException {

@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
@@ -14,16 +13,13 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
-import com.github.i49.bee.hives.HiveException;
 import com.github.i49.bee.hives.Linker;
 import com.github.i49.bee.hives.Storage;
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebContentException;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
 import com.github.i49.bee.web.CachingWebDownloader;
-import com.github.i49.bee.web.LinkSourceResource;
 
 /**
  * Bee who visits web sites.
@@ -80,10 +76,13 @@ public class Bee {
 
 	protected void rewriteLinks(History history) {
 		Linker linker = this.hive.createLinker(history.getRedirections());
-		for (Found found : history.getLinkSources()) {
+		for (Found f : history.getLinkSources()) {
 			try {
-				linker.link(found.getLocalPath(), found.getMetadata());
+				report(x->x.handleLinkStarted(f));
+				linker.link(f.getLocalPath(), f.getMetadata());
+				report(x->x.handleLinkCompleted(f));
 			} catch (WebContentException | IOException e) {
+				report(x->x.handleLinkFailed(f, e));
 			} 
 		}
 	}
@@ -119,6 +118,10 @@ public class Bee {
 		this.nextResourceNo = 1;
 	}
 	
+	protected void report(Consumer<BeeEventHandler> action) {
+		this.handlers.stream().forEach(action);
+	}
+	
 	private class BeeAsTripper extends Tripper {
 
 		public BeeAsTripper(int tripNo, Trip trip, WebDownloader downloader, Hive hive, History history) {
@@ -138,13 +141,12 @@ public class Bee {
 		@Override
 		protected Found newFound(WebResource resource) {
 			int resourceNo = nextResourceNo++;
-			boolean linkSource = (resource instanceof LinkSourceResource);
-			return new Found(resourceNo, resource.getMetadata(), linkSource);
+			return new Found(resourceNo, resource.getMetadata());
 		}
 
 		@Override
 		protected void report(Consumer<BeeEventHandler> action) {
-			handlers.stream().forEach(action);
+			Bee.this.report(action);
 		}
 	}
 }

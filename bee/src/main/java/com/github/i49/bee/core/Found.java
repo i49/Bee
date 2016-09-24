@@ -12,20 +12,25 @@ public class Found {
 
 	private final int resourceNo;
 	private final ResourceMetadata metadata;
-	private final boolean linkSource;
+
+	private boolean linkSource;
 	private List<Locator> hyperlinks;
 	private List<Locator> externalResourceLinks;
 	private String localPath;
 	
-	public Found(int resourceNo, ResourceMetadata metadata, boolean linkSource) {
+	public Found(int resourceNo, ResourceMetadata metadata) {
 		this.resourceNo = resourceNo;
 		this.metadata = metadata;
-		this.linkSource = linkSource;
+		this.linkSource = false;
 		this.hyperlinks = Collections.emptyList();
 		this.externalResourceLinks = Collections.emptyList();
 	}
 
-	public int resourceNo() {
+	/**
+	 * Returns sequence number assigned to this found.
+	 * @return sequence number assigned
+	 */
+	public int getResourceNo() {
 		return resourceNo;
 	}
 	
@@ -37,10 +42,14 @@ public class Found {
 		return linkSource;
 	}
 	
+	public void markAsLinkSource() {
+		this.linkSource = true;
+	}
+
 	public List<Locator> getHyperlinks() {
 		return hyperlinks;
 	}
-
+	
 	public void setHyperlinks(List<Locator> hyperlinks) {
 		this.hyperlinks = hyperlinks;
 	}

@@ -61,10 +61,12 @@ public class BasicLinker implements Linker {
 		Map<Locator, Locator> map = new HashMap<>();
 		for (Link link  : links) {
 			Locator remote = link.getLocation();
-			final String local = this.layout.mapPath(getRedirected(remote));
-			Locator targetPath = Locator.pathOf(local);
-			Locator relativePath = basePath.relativize(targetPath);
-			map.put(remote, relativePath);
+			if (this.layout.find(remote)) {
+				final String local = this.layout.mapPath(getRedirected(remote));
+				Locator targetPath = Locator.pathOf(local);
+				Locator relativePath = basePath.relativize(targetPath);
+				map.put(remote, relativePath);
+			}
 		}
 		return map;
 	}

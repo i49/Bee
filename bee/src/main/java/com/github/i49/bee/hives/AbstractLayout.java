@@ -25,25 +25,33 @@ public abstract class AbstractLayout implements Layout {
 	}
 	
 	@Override
-	public String mapPath(Locator location) {
-		if (location == null) {
-			return null;
-		}
-		String path = cache.get(location);
-		if (path == null) {
-			path = doMapPath(location);
-			if (path != null) {
-				path = adjustPath(path);
-				addPathToDirectories(path);
-				addPathToCache(location, path);
-			}
-		}
-		return path;
+	public void setIndexName(String name) {
+		this.indexName = name;
 	}
 	
 	@Override
-	public void setIndexName(String name) {
-		this.indexName = name;
+	public boolean find(Locator remotePath) {
+		if (remotePath == null) {
+			return false;
+		}
+		return (this.cache.get(remotePath) != null);
+	}
+	
+	@Override
+	public String mapPath(Locator remotePath) {
+		if (remotePath == null) {
+			return null;
+		}
+		String localPath = cache.get(remotePath);
+		if (localPath == null) {
+			localPath = doMapPath(remotePath);
+			if (localPath != null) {
+				localPath = adjustPath(localPath);
+				addPathToDirectories(localPath);
+				addPathToCache(remotePath, localPath);
+			}
+		}
+		return localPath;
 	}
 	
 	protected String adjustPath(String path) {
