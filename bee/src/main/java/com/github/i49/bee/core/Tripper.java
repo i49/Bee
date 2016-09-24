@@ -65,6 +65,9 @@ public abstract class Tripper {
 	}
 
 	private void tryVisit(Visit v) throws WebException, HiveException {
+		if (recallVisit(v, v.getLocation())) {
+			return;
+		}
 		WebResource resource = retrieveResource(v);
 		if (resource instanceof LinkSourceResource) {
 			parseResource(v, (LinkSourceResource)resource);
@@ -82,8 +85,7 @@ public abstract class Tripper {
 	}
 	
 	private void parseResource(Visit v, LinkSourceResource resource) {
-		Found f = v.getFound();
-		f.markAsLinkSource();
+		Found f = v.getFound().markAsLinkSource();
 		Collection<Link> links = resource.getLinks();
 		f.setHyperlinks(filterLinks(links, getHyperlinkSelector()));
 		f.setExternalResourceLinks(filterLinks(links, getExternalResourceLinkSelector()));
@@ -96,6 +98,16 @@ public abstract class Tripper {
 		report(x->x.handleStoreCompleted(v));
 	}
 
+	private boolean recallVisit(Visit v, Locator location) {
+		Visit visited = history.recallVisit(location);
+		if (visited != null) {
+			v.setFound(visited.getFound());
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 	private List<Locator> filterLinks(Collection<Link> links, Predicate<Link> selector) {
 		return links.stream()
 			.filter(selector)
@@ -120,7 +132,7 @@ public abstract class Tripper {
 		for (Locator location : found.getExternalResourceLinks()) {
 			this.visits.add(i++, newVisit(location, nextDistance));
 		}
-		if (nextDistance < this.trip.getDistanceLimit()) {
+		if (nextDistance <= this.trip.getDistanceLimit()) {
 			for (Locator location : found.getHyperlinks()) {
 				this.visits.add(i++, newVisit(location, nextDistance));
 			}

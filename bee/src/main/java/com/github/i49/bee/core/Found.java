@@ -42,8 +42,9 @@ public class Found {
 		return linkSource;
 	}
 	
-	public void markAsLinkSource() {
+	public Found markAsLinkSource() {
 		this.linkSource = true;
+		return this;
 	}
 
 	public List<Locator> getHyperlinks() {

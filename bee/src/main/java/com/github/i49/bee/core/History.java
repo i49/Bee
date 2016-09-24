@@ -3,7 +3,7 @@ package com.github.i49.bee.core;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,16 +15,16 @@ public class History {
 	private final List<Visit> visits = new ArrayList<>();
 	private final Map<Locator, Visit> visitMap = new HashMap<>();
 	private final Map<Locator, Locator> redirections = new HashMap<>();
-	private final Set<Found> linkSources = new HashSet<>();
+	private final Set<Found> linkSources = new LinkedHashSet<>();
 	
 	public History() {
 	}
 
 	public void addVisit(Visit v) {
 		this.visits.add(v);
-		this.visitMap.put(v.getLocation(), v);
+		addFirstVisitTo(v.getLocation(), v);
 		if (v.isRedirected()) {
-			this.visitMap.put(v.getInitialLocation(), v);
+			addFirstVisitTo(v.getInitialLocation(), v);
 			this.redirections.put(v.getInitialLocation(), v.getLocation());
 		}
 		Found found = v.getFound();
@@ -33,11 +33,24 @@ public class History {
 		}
 	}
 	
+	public Visit recallVisit(Locator location) {
+		if (location == null) {
+			return null;
+		}
+		return this.visitMap.get(location);
+	}
+	
 	public Collection<Found> getLinkSources() {
 		return linkSources;
 	}
 	
 	public Map<Locator, Locator> getRedirections() {
 		return redirections;
+	}
+	
+	private void addFirstVisitTo(Locator location, Visit v) {
+		if (this.visitMap.get(location) == null) {
+			this.visitMap.put(location, v);
+		}
 	}
 }
