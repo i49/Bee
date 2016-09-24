@@ -14,77 +14,79 @@ public class ConsoleLogger implements BeeEventHandler {
 
 	@Override
 	public void handleDownloadStarted(Visit v) {
-		StringBuilder builder = builderFor(v);
-		builder.append("Downloading <").append(v.getLocation()).append(">");
-		log.info(builder.toString());
+		StringBuilder b = builderFor(v);
+		b.append("Downloading <").append(v.getLocation()).append(">");
+		log.info(b.toString());
 	}
 
 	@Override
 	public void handleDownloadCompleted(Visit v) {
-		StringBuilder builder = builderFor(v);
-		builder.append("Downloaded <").append(v.getLocation()).append(">");
+		StringBuilder b = builderFor(v);
+		b.append("Downloaded <").append(v.getLocation()).append(">");
 		ResourceMetadata metadata = v.getFound().getMetadata();
-		builder.append(" (").append(metadata.getMediaType()).append(")");
-		log.info(builder.toString());
+		b.append(" (").append(metadata.getMediaType()).append(")");
+		log.info(b.toString());
 	}
 
 	@Override
 	public void handleDownloadFailed(Visit v, Exception e) {
-		StringBuilder builder = builderFor(v);
-		builder.append("Failed to download <").append(v.getLocation()).append(">");
-		log.info(builder.toString());
+		StringBuilder b = builderFor(v);
+		b.append("Failed to download <").append(v.getLocation()).append(">");
+		log.error(b.toString());
 	}
 	
 	@Override
 	public void handleStoreCompleted(Visit v) {
-		StringBuilder builder = builderFor(v);
-		builder.append("Stored at \"").append(v.getFound().getLocalPath()).append("\"");
-		log.info(builder.toString());
+		StringBuilder b = builderFor(v);
+		b.append("Stored at \"").append(v.getFound().getLocalPath()).append("\"");
+		log.info(b.toString());
 	}
 	
 	@Override
 	public void handleStoreFailed(Visit v, Exception e) {
-		StringBuilder builder = builderFor(v);
-		builder.append("Failed to store at \"").append(v.getLocation()).append("\"");
-		log.info(builder.toString());
+		StringBuilder b = builderFor(v);
+		b.append("Failed to store at \"").append(v.getLocation()).append("\"");
+		log.error(b.toString());
+	}
+	
+	@Override
+	public void handleVisitSkipped(Visit v, Exception e) {
+		StringBuilder b = builderFor(v);
+		b.append("Skipped visited ").append("<").append(v.getLocation()).append(">");
+		log.warn(b.toString());
 	}
 	
 	@Override
 	public void handleLinkStarted(Found f) {
-		StringBuilder builder = builderFor(f);
-		builder.append("Rewriting ");
-		appendLocations(builder, f);
-		log.info(builder.toString());
+		StringBuilder b = builderFor(f);
+		b.append("Rewriting ");
+		appendLinkLocation(b, f);
+		log.info(b.toString());
 	}
 
 	@Override
 	public void handleLinkFailed(Found f, Exception e) {
-		StringBuilder builder = builderFor(f);
-		builder.append("Failed to rewrite ");
-		appendLocations(builder, f);
-		log.info(builder.toString());
+		StringBuilder b = builderFor(f);
+		b.append("Failed to rewrite ");
+		appendLinkLocation(b, f);
+		log.error(b.toString());
 	}
 	
 	private StringBuilder builderFor(Visit v) {
-		StringBuilder builder = new StringBuilder();
-		builder.append("[").append(v.getTripNo())
+		StringBuilder b = new StringBuilder();
+		b.append("[").append(v.getTripNo())
 			.append(":").append(v.getVisitNo())
 			.append(":").append(v.getDistance()).append("] ");
-		return builder;
+		return b;
 	}
 	
 	private StringBuilder builderFor(Found f) {
-		StringBuilder builder = new StringBuilder();
-		builder.append("[").append(f.getResourceNo()).append("] ");
-		return builder;
+		StringBuilder b = new StringBuilder();
+		b.append("[").append(f.getResourceNo()).append("] ");
+		return b;
 	}
 	
-	private static void appendLocations(StringBuilder builder, Found f) {
-		builder
-			.append("\"")
-			.append(f.getLocalPath())
-			.append("\" from <")
-			.append(f.getMetadata().getLocation())
-			.append(">");
+	private static void appendLinkLocation(StringBuilder b, Found f) {
+		b.append("\"").append(f.getLocalPath()).append("\"");
 	}
 }

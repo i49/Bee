@@ -55,6 +55,10 @@ public abstract class Tripper {
 		try {
 			tryVisit(v);
 			addVisitsAfter(v);
+		} catch (VisitedException e) {
+			v.setFoundOf(e.getEarlierVisit());
+			report(x->x.handleVisitSkipped(v, e));
+			addVisitsAfter(v);
 		} catch (WebException e) {
 			report(x->x.handleDownloadFailed(v, e));
 		} catch (HiveException e) {
@@ -64,10 +68,8 @@ public abstract class Tripper {
 		}
 	}
 
-	private void tryVisit(Visit v) throws WebException, HiveException {
-		if (recallVisit(v, v.getLocation())) {
-			return;
-		}
+	private void tryVisit(Visit v) throws WebException, HiveException, VisitedException {
+		assertFirstVisit(v.getLocation());
 		WebResource resource = retrieveResource(v);
 		if (resource instanceof LinkSourceResource) {
 			parseResource(v, (LinkSourceResource)resource);
@@ -75,11 +77,11 @@ public abstract class Tripper {
 		storeResource(v, resource);
 	}
 	
-	private WebResource retrieveResource(Visit v) throws WebException {
+	private WebResource retrieveResource(Visit v) throws WebException, VisitedException {
 		report(x->x.handleDownloadStarted(v));
 		WebResource resource = this.downloader.download(v.getLocation());
-		Found f = newFound(resource);
-		v.setFound(f);
+		assertFirstVisit(resource.getMetadata().getLocation());
+		v.setFound(newFound(resource));
 		report(x->x.handleDownloadCompleted(v));
 		return resource;
 	}
@@ -98,13 +100,10 @@ public abstract class Tripper {
 		report(x->x.handleStoreCompleted(v));
 	}
 
-	private boolean recallVisit(Visit v, Locator location) {
-		Visit visited = history.recallVisit(location);
-		if (visited != null) {
-			v.setFound(visited.getFound());
-			return true;
-		} else {
-			return false;
+	private void assertFirstVisit(Locator location) throws VisitedException {
+		Visit earlierVisit = history.recallVisit(location);
+		if (earlierVisit != null) {
+			throw new VisitedException(earlierVisit);
 		}
 	}
 	
@@ -152,4 +151,18 @@ public abstract class Tripper {
 	protected abstract Found newFound(WebResource resource);
 	
 	protected abstract void report(Consumer<BeeEventHandler> action);
+
+	private static class VisitedException extends Exception {
+
+		private static final long serialVersionUID = 1L;
+		private final Visit earlier;
+		
+		public VisitedException(Visit earlier) {
+			this.earlier = earlier;
+		}
+		
+		public Visit getEarlierVisit() {
+			return earlier;
+		}
+	}
 }

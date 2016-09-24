@@ -56,4 +56,8 @@ public class Visit {
 	public void setFound(Found found) {
 		this.found = found;
 	}
+	
+	public void setFoundOf(Visit other) {
+		this.found = other.found;
+	}
 }

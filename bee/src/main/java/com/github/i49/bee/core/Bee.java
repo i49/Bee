@@ -26,6 +26,7 @@ import com.github.i49.bee.web.CachingWebDownloader;
  */
 public class Bee {
 	
+	@SuppressWarnings("unused")
 	private static final Log log = LogFactory.getLog(Bee.class);
 	
 	private final List<Trip> trips = new ArrayList<>();

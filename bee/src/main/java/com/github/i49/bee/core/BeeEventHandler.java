@@ -17,6 +17,8 @@ public interface BeeEventHandler {
 	
 	default void handleStoreFailed(Visit v, Exception e) {}
 	
+	default void handleVisitSkipped(Visit v, Exception e) {}
+	
 	default void handleLinkStarted(Found f) {}
 	
 	default void handleLinkCompleted(Found f) {}
