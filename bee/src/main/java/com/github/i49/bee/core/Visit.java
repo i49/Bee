@@ -4,13 +4,25 @@ import com.github.i49.bee.web.Locator;
 
 public class Visit {
 
+	private final int tripNo;
+	private final int visitNo;
 	private final Locator initialLocation;
 	private final int distance;
 	private Found found;
 	
-	public Visit(Locator location, int distance) {
+	public Visit(int tripNo, int visitNo, Locator location, int distance) {
+		this.tripNo = tripNo;
+		this.visitNo = visitNo;
 		this.initialLocation = location;
 		this.distance = distance;
+	}
+	
+	public int getTripNo() {
+		return tripNo;
+	}
+	
+	public int getVisitNo() {
+		return visitNo;
 	}
 
 	public Locator getLocation() {

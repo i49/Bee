@@ -12,24 +12,29 @@ import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebException;
 import com.github.i49.bee.web.WebResource;
 
 public abstract class Tripper {
 
+	private final int tripNo;
 	private final Trip trip;
 	private final WebDownloader downloader;
 	private final Hive hive;
 	private final History history;
 	
+	private int nextVisitNo;
 	private final LinkedList<Visit> visits = new LinkedList<>();
 	
-	public Tripper(Trip trip, WebDownloader downloader, Hive hive, History history) {
+	public Tripper(int tripNo, Trip trip, WebDownloader downloader, Hive hive, History history) {
+		this.tripNo = tripNo;
 		this.trip = trip;
 		this.downloader = downloader;
 		this.hive = hive;
 		this.history = history;
+		this.nextVisitNo = 1;
 	}
 
 	public void makeTrip() {
@@ -37,7 +42,7 @@ public abstract class Tripper {
 		if (location == null) {
 			return;
 		}
-		visits.addFirst(new Visit(location, 0));
+		visits.addFirst(newVisit(location, 0));
 		visitAll();
 	}
 	
@@ -54,7 +59,7 @@ public abstract class Tripper {
 		} catch (WebException e) {
 		} catch (IOException e) {
 		} finally {
-			this.history.addVisit(v);
+			history.addVisit(v);
 		}
 	}
 
@@ -69,7 +74,7 @@ public abstract class Tripper {
 	private WebResource retrieveResource(Visit v) throws WebException {
 		report(x->x.handleDownloadStarted(v));
 		WebResource resource = this.downloader.download(v.getLocation());
-		Found found = this.history.createFound(v.getLocation(), resource.getMetadata());
+		Found found = newFound(resource);
 		v.setFound(found);
 		report(x->x.handleDownloadCompleted(v));
 		return resource;
@@ -98,6 +103,11 @@ public abstract class Tripper {
 			.collect(Collectors.toList());
 	}
 	
+	private Visit newVisit(Locator location, int distance) {
+		int visitNo = this.nextVisitNo++;
+		return new Visit(this.tripNo, visitNo, location, distance);
+	}
+	
 	private void addNextVisits(Visit v) {
 		if (!v.hasFound()) {
 			return;
@@ -106,11 +116,11 @@ public abstract class Tripper {
 		int nextDistance = v.getDistance() + 1;
 		int i = 0;
 		for (Locator location : found.getExternalResourceLinks()) {
-			this.visits.add(i++, new Visit(location, nextDistance));
+			this.visits.add(i++, newVisit(location, nextDistance));
 		}
 		if (nextDistance < this.trip.getDistanceLimit()) {
 			for (Locator location : found.getHyperlinks()) {
-				this.visits.add(i++, new Visit(location, nextDistance));
+				this.visits.add(i++, newVisit(location, nextDistance));
 			}
 		}
 	}
@@ -124,6 +134,8 @@ public abstract class Tripper {
 	}
 
 	protected abstract boolean canVisit(Locator location);
+	
+	protected abstract Found newFound(WebResource resource);
 	
 	protected abstract void report(Consumer<BeeEventHandler> action);
 }

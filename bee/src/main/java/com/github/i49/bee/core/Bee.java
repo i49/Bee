@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
@@ -14,10 +15,15 @@ import org.apache.commons.logging.LogFactory;
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.hives.HiveException;
+import com.github.i49.bee.hives.Linker;
 import com.github.i49.bee.hives.Storage;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
+import com.github.i49.bee.web.WebContentException;
 import com.github.i49.bee.web.WebDownloader;
+import com.github.i49.bee.web.WebResource;
 import com.github.i49.bee.web.CachingWebDownloader;
+import com.github.i49.bee.web.LinkSourceResource;
 
 /**
  * Bee who visits web sites.
@@ -31,6 +37,8 @@ public class Bee {
 	
 	private Hive hive; 
 	private final List<BeeEventHandler> handlers = new ArrayList<>();
+	
+	private int nextResourceNo;
 	
 	public Bee() {
 		addDefaultEventHandlers();
@@ -49,9 +57,9 @@ public class Bee {
 	}
 	
 	public void launch() throws BeeException {
-		log.debug("Bee launched.");
 		try {
 			History history = new History();
+			resetForTrips();
 			makeAllTrips(history);
 			rewriteLinks(history);
 		} catch (Exception e) {
@@ -60,15 +68,24 @@ public class Bee {
 	}
 	
 	protected void makeAllTrips(History history) throws Exception {
+		int tripNo = 1;
 		try (Hive hive = openHive(); WebDownloader downloader = createWebDownloader(hive)) {
 			for (Trip trip : this.trips) {
-				Tripper tripper = new BeeAsTripper(trip, downloader, hive, history);
+				Tripper tripper = new BeeAsTripper(tripNo, trip, downloader, hive, history);
 				tripper.makeTrip();
+				tripNo++;
 			}
 		}
 	}
 
-	protected void rewriteLinks(History history) throws HiveException {
+	protected void rewriteLinks(History history) {
+		Linker linker = this.hive.createLinker(history.getRedirections());
+		for (Found found : history.getLinkSources()) {
+			try {
+				linker.link(found.getLocalPath(), found.getMetadata());
+			} catch (WebContentException | IOException e) {
+			} 
+		}
 	}
 	
 	protected Hive openHive() throws IOException {
@@ -95,13 +112,17 @@ public class Bee {
 	}
 	
 	protected void addDefaultEventHandlers() {
-		this.handlers.add(new BasicConsoleLogger());
+		this.handlers.add(new ConsoleLogger());
+	}
+	
+	protected void resetForTrips() {
+		this.nextResourceNo = 1;
 	}
 	
 	private class BeeAsTripper extends Tripper {
 
-		public BeeAsTripper(Trip trip, WebDownloader downloader, Hive hive, History history) {
-			super(trip, downloader, hive, history);
+		public BeeAsTripper(int tripNo, Trip trip, WebDownloader downloader, Hive hive, History history) {
+			super(tripNo, trip, downloader, hive, history);
 		}
 		
 		@Override
@@ -114,6 +135,13 @@ public class Bee {
 			return false;
 		}
 		
+		@Override
+		protected Found newFound(WebResource resource) {
+			int resourceNo = nextResourceNo++;
+			boolean linkSource = (resource instanceof LinkSourceResource);
+			return new Found(resourceNo, resource.getMetadata(), linkSource);
+		}
+
 		@Override
 		protected void report(Consumer<BeeEventHandler> action) {
 			handlers.stream().forEach(action);
