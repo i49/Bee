@@ -19,7 +19,7 @@ public interface Hive extends AutoCloseable {
 	
 	void open() throws IOException;
 	
-	String store(WebResource resource) throws IOException;
+	String store(WebResource resource) throws HiveException;
 	
 	Linker createLinker(Map<Locator, Locator> redirections);
 }

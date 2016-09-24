@@ -78,18 +78,26 @@ public abstract class AbstractHive implements Hive {
 	}
 
 	@Override
-	public String store(WebResource resource) throws IOException {
+	public String store(WebResource resource) throws HiveException {
+		try {
+			return tryStore(resource);
+		} catch (Exception e) {
+			throw new StoreException(resource.getMetadata(), e);
+		}
+	}
+
+	@Override
+	public Linker createLinker(Map<Locator, Locator> redirections) {
+		return new BasicLinker(redirections, this.layout, this.storage, this.serializer);
+	}
+	
+	private String tryStore(WebResource resource) throws Exception {
 		final String localPath = this.layout.mapPath(resource.getMetadata().getLocation());
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
 		this.storage.write(localPath, bytes, lastModified);
 		return localPath;
 	}
-
-	@Override
-	public Linker createLinker(Map<Locator, Locator> redirections) {
-		return new BasicLinker(redirections, this.layout, this.storage, this.serializer);
-	};
 
 	private byte[] serializeResource(WebResource resource) {
 		return resource.getBytes(this.serializer);

@@ -1,6 +1,5 @@
 package com.github.i49.bee.core;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,6 +8,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.github.i49.bee.hives.Hive;
+import com.github.i49.bee.hives.HiveException;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSourceResource;
 import com.github.i49.bee.web.Locator;
@@ -54,15 +54,17 @@ public abstract class Tripper {
 	private void visit(Visit v) {
 		try {
 			tryVisit(v);
-			addNextVisits(v);
+			addVisitsAfter(v);
 		} catch (WebException e) {
-		} catch (IOException e) {
+			report(x->x.handleDownloadFailed(v, e));
+		} catch (HiveException e) {
+			report(x->x.handleStoreFailed(v, e));
 		} finally {
 			history.addVisit(v);
 		}
 	}
 
-	private void tryVisit(Visit v) throws WebException, IOException {
+	private void tryVisit(Visit v) throws WebException, HiveException {
 		WebResource resource = retrieveResource(v);
 		if (resource instanceof LinkSourceResource) {
 			parseResource(v, (LinkSourceResource)resource);
@@ -87,7 +89,7 @@ public abstract class Tripper {
 		f.setExternalResourceLinks(filterLinks(links, getExternalResourceLinkSelector()));
 	}
 	
-	private void storeResource(Visit v, WebResource resource) throws IOException {
+	private void storeResource(Visit v, WebResource resource) throws HiveException {
 		report(x->x.handleStoreStarted(v));
 		String localPath = this.hive.store(resource);
 		v.getFound().setLocalPath(localPath);
@@ -108,7 +110,7 @@ public abstract class Tripper {
 		return new Visit(this.tripNo, visitNo, location, distance);
 	}
 	
-	private void addNextVisits(Visit v) {
+	private void addVisitsAfter(Visit v) {
 		if (!v.hasFound()) {
 			return;
 		}
