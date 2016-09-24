@@ -3,8 +3,6 @@ package com.github.i49.bee.core;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.github.i49.bee.web.Locator;
-
 /**
  * Default implementation of console logger.
  */
@@ -13,61 +11,53 @@ public class BasicConsoleLogger implements BeeEventHandler {
 	private static final Log log = LogFactory.getLog(BasicConsoleLogger.class);
 
 	@Override
-	public void handleDownloadStarted(int distance, int level, Locator location) {
+	public void handleDownloadStarted(Visit v) {
 		StringBuilder builder = new StringBuilder("Downloading: ");
-		appendLocationPart(builder, distance, level, location);
+		appendLocationPart(builder, v);
 		log.info(builder.toString());
 	}
 
 	@Override
-	public void handleDownloadCompleted(int distance, int level, Visit visit) {
+	public void handleDownloadCompleted(Visit v) {
 		StringBuilder builder = new StringBuilder("Downloaded: ");
-		appendLocationPart(builder, distance, level, visit);
+		appendLocationPart(builder, v);
 		log.info(builder.toString());
 	}
 
 	@Override
-	public void handleDownloadFailed(int distance, int level, Locator location, Exception e) {
+	public void handleDownloadFailed(Visit v, Exception e) {
 		StringBuilder builder = new StringBuilder("Failed to download: ");
-		appendLocationPart(builder, distance, level, location);
+		appendLocationPart(builder, v);
 		log.info(builder.toString());
 	}
 	
 	@Override
-	public void handleStoreStarted(int distance, int level, Visit visit) {
+	public void handleStoreStarted(Visit v) {
 	}
 	
 	@Override
-	public void handleStoreCompleted(int distance, int level, Visit visit) {
+	public void handleStoreCompleted(Visit v) {
 		StringBuilder builder = new StringBuilder("Stored: ");
-		appendLocationPart(builder, distance, level, visit);
+		appendLocationPart(builder, v);
 		log.info(builder.toString());
 	}
 	
 	@Override
-	public void handleStoreFailed(int distance, int level, Visit visit, Exception e) {
+	public void handleStoreFailed(Visit v, Exception e) {
 		StringBuilder builder = new StringBuilder("Failed to store: ");
-		appendLocationPart(builder, distance, level, visit);
+		appendLocationPart(builder, v);
 		log.info(builder.toString());
 	}
 
-	protected void appendLocationPart(StringBuilder builder, int distance, int level, Locator location) {
-		appendDistance(builder, distance, level);
-		builder.append(location.toString());
-	}
-	
-	protected void appendLocationPart(StringBuilder builder, int distance, int level, Visit visit) {
-		appendDistance(builder, distance, level);
-		builder.append(visit.getMetadata().getLocation().toString());
-		builder.append(" (#").append(visit.getId()).append(")");
+	protected void appendLocationPart(StringBuilder builder, Visit v) {
+		appendDistance(builder, v.getDistance());
+		builder.append(v.getLocation().toString());
+		if (v.hasFound()) {
+			builder.append(" (#").append(v.getFound().getId()).append(")");
+		}
 	}
 
-	protected void appendDistance(StringBuilder builder, int distance, int level) {
-		builder.append("[");
-		builder.append(distance - level);
-		if (level > 0) {
-			builder.append("+").append(level);
-		}
-		builder.append("]");
+	protected void appendDistance(StringBuilder builder, int distance) {
+		builder.append("[").append(distance).append("]");
 	}
 }

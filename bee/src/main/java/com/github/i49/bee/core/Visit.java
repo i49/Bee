@@ -1,46 +1,47 @@
 package com.github.i49.bee.core;
 
 import com.github.i49.bee.web.Locator;
-import com.github.i49.bee.web.ResourceMetadata;
 
 public class Visit {
 
-	private int id;
-	private ResourceMetadata metadata;
-	private boolean stored;
-	
-	public Visit(int id, ResourceMetadata metadata) {
-		this.id = id;
-		this.metadata = metadata;
-		this.stored = false;
-	}
+	private final Locator initialLocation;
+	private final int distance;
+	private Found found;
 	
 	public Visit(Locator location, int distance) {
+		this.initialLocation = location;
+		this.distance = distance;
 	}
 
-	public int getId() {
-		return id;
-	}
-
-	public ResourceMetadata getMetadata() {
-		return metadata;
-	}
-	
-	public boolean isStored() {
-		return stored;
-	}
-	
-	public void setStored() {
-		this.stored = true;
-	}
-	
-	//
-	
 	public Locator getLocation() {
-		return null;
+		if (hasFound()) {
+			return getFound().getMetadata().getLocation();
+		} else {
+			return getInitialLocation();
+		}
+	}
+
+	public Locator getInitialLocation() {
+		return initialLocation;
+	}
+	
+	public boolean isRedirected() {
+		return !getLocation().equals(getInitialLocation());
 	}
 	
 	public int getDistance() {
-		return 0;
+		return distance;
+	}
+
+	public boolean hasFound() {
+		return getFound() != null;
+	}
+
+	public Found getFound() {
+		return found;
+	}
+	
+	public void setFound(Found found) {
+		this.found = found;
 	}
 }

@@ -1,21 +1,19 @@
 package com.github.i49.bee.core;
 
-import com.github.i49.bee.web.Locator;
-
 /**
  * The handler interface to receive events that will occur against Bee. 
  */
 public interface BeeEventHandler {
 
-	void handleDownloadStarted(int distance, int level, Locator location);
+	void handleDownloadStarted(Visit v);
 	
-	void handleDownloadCompleted(int distance, int level, Visit visit);
+	void handleDownloadCompleted(Visit v);
 	
-	void handleDownloadFailed(int distance, int level, Locator location, Exception e);
+	void handleDownloadFailed(Visit v, Exception e);
 	
-	void handleStoreStarted(int distance, int level, Visit visit);
+	void handleStoreStarted(Visit v);
 	
-	void handleStoreCompleted(int distance, int level, Visit visit);
+	void handleStoreCompleted(Visit v);
 	
-	void handleStoreFailed(int distance, int level, Visit visit, Exception e);
+	void handleStoreFailed(Visit v, Exception e);
 }

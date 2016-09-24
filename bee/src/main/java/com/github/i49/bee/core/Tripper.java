@@ -1,11 +1,11 @@
 package com.github.i49.bee.core;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.github.i49.bee.hives.Hive;
@@ -20,15 +20,16 @@ public abstract class Tripper {
 
 	private final Trip trip;
 	private final WebDownloader downloader;
+	private final Hive hive;
+	private final History history;
 	
 	private final LinkedList<Visit> visits = new LinkedList<>();
 	
-	private List<Locator> externalResourceLinks;
-	private List<Locator> hyperlinks;
-
-	public Tripper(Trip trip, WebDownloader downloader) {
+	public Tripper(Trip trip, WebDownloader downloader, Hive hive, History history) {
 		this.trip = trip;
 		this.downloader = downloader;
+		this.hive = hive;
+		this.history = history;
 	}
 
 	public void makeTrip() {
@@ -37,6 +38,10 @@ public abstract class Tripper {
 			return;
 		}
 		visits.addFirst(new Visit(location, 0));
+		visitAll();
+	}
+	
+	private void visitAll() {
 		while (!visits.isEmpty()) {
 			visit(visits.removeFirst());
 		}
@@ -45,10 +50,11 @@ public abstract class Tripper {
 	private void visit(Visit v) {
 		try {
 			tryVisit(v);
-			addNextVisits(v.getDistance() + 1);
+			addNextVisits(v);
 		} catch (WebException e) {
 		} catch (IOException e) {
 		} finally {
+			this.history.addVisit(v);
 		}
 	}
 
@@ -61,36 +67,63 @@ public abstract class Tripper {
 	}
 	
 	private WebResource retrieveResource(Visit v) throws WebException {
+		report(x->x.handleDownloadStarted(v));
 		WebResource resource = this.downloader.download(v.getLocation());
+		Found found = this.history.createFound(v.getLocation(), resource.getMetadata());
+		v.setFound(found);
+		report(x->x.handleDownloadCompleted(v));
 		return resource;
 	}
 	
 	private void parseResource(Visit v, LinkSourceResource resource) {
 		Collection<Link> links = resource.getLinks();
-		this.externalResourceLinks = links.stream().map(x->x.getLocation()).collect(Collectors.toList());
+		Found found = v.getFound();
+		found.setHyperlinks(filterLinks(links, getHyperlinkSelector()));
+		found.setExternalResourceLinks(filterLinks(links, getExternalResourceLinkSelector()));
 	}
 	
 	private void storeResource(Visit v, WebResource resource) throws IOException {
-		String localPath = getHive().store(resource);
+		report(x->x.handleStoreStarted(v));
+		String localPath = this.hive.store(resource);
+		v.getFound().setLocalPath(localPath);
+		report(x->x.handleStoreCompleted(v));
 	}
 
-	private void addNextVisits(int nextDistance) {
+	private List<Locator> filterLinks(Collection<Link> links, Predicate<Link> selector) {
+		return links.stream()
+			.filter(selector)
+			.map(Link::getLocation)
+			.filter(location->canVisit(location))
+			.distinct()
+			.collect(Collectors.toList());
+	}
+	
+	private void addNextVisits(Visit v) {
+		if (!v.hasFound()) {
+			return;
+		}
+		Found found = v.getFound();
+		int nextDistance = v.getDistance() + 1;
 		int i = 0;
-		for (Locator location : this.externalResourceLinks) {
+		for (Locator location : found.getExternalResourceLinks()) {
 			this.visits.add(i++, new Visit(location, nextDistance));
 		}
 		if (nextDistance < this.trip.getDistanceLimit()) {
-			for (Locator location : this.hyperlinks) {
+			for (Locator location : found.getHyperlinks()) {
 				this.visits.add(i++, new Visit(location, nextDistance));
 			}
 		}
-		this.externalResourceLinks = null;
-		this.hyperlinks = null;
+	}
+	
+	protected Predicate<Link> getHyperlinkSelector() {
+		return trip.getLinkStrategy().getHyperlinkSelector();
+	}
+	
+	protected Predicate<Link> getExternalResourceLinkSelector() {
+		return trip.getLinkStrategy().getExternalResoureLinkSelector();
 	}
 
 	protected abstract boolean canVisit(Locator location);
-	
-	protected abstract Hive getHive();
 	
 	protected abstract void report(Consumer<BeeEventHandler> action);
 }

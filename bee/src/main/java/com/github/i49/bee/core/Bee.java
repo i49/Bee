@@ -5,11 +5,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,7 +18,6 @@ import com.github.i49.bee.hives.Storage;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.CachingWebDownloader;
-import com.github.i49.bee.web.Link;
 
 /**
  * Bee who visits web sites.
@@ -34,8 +30,6 @@ public class Bee {
 	private final List<WebSite> sites = new ArrayList<>();
 	
 	private Hive hive; 
-	private WebDownloader downloader;
-	private VisitMap visitMap;
 	private final List<BeeEventHandler> handlers = new ArrayList<>();
 	
 	public Bee() {
@@ -57,30 +51,24 @@ public class Bee {
 	public void launch() throws BeeException {
 		log.debug("Bee launched.");
 		try {
-			makeAllTrips();
-			rewriteLinks();
+			History history = new History();
+			makeAllTrips(history);
+			rewriteLinks(history);
 		} catch (Exception e) {
 			throw new BeeException(e);
 		}
 	}
 	
-	protected void makeAllTrips() throws Exception {
-		this.visitMap = new VisitMap();
+	protected void makeAllTrips(History history) throws Exception {
 		try (Hive hive = openHive(); WebDownloader downloader = createWebDownloader(hive)) {
-			runTasks();
+			for (Trip trip : this.trips) {
+				Tripper tripper = new BeeAsTripper(trip, downloader, hive, history);
+				tripper.makeTrip();
+			}
 		}
 	}
 
-	protected void runTasks() {
-		for (Trip trip : this.trips) {
-			TripTask task = new TripTask(trip);
-			BeeAsVisitor visitor = createVisitor(trip);
-			task.setVisitor(visitor);
-			task.run();
-		}
-	}
-	
-	protected void rewriteLinks() throws HiveException {
+	protected void rewriteLinks(History history) throws HiveException {
 	}
 	
 	protected Hive openHive() throws IOException {
@@ -93,7 +81,7 @@ public class Bee {
 
 	protected WebDownloader createWebDownloader(Hive hive) {
 		Path pathToCache = getCacheDirectoryForHive(hive);
-		this.downloader = new CachingWebDownloader(pathToCache);
+		WebDownloader downloader = new CachingWebDownloader(pathToCache);
 		return downloader;
 	}
 	
@@ -110,91 +98,10 @@ public class Bee {
 		this.handlers.add(new BasicConsoleLogger());
 	}
 	
-	protected BeeAsVisitor createVisitor(Trip trip) {
-		return new BeeAsVisitor(trip);
-	}
-
-	/**
-	 * A visitor making one trip.
-	 */
-	private class BeeAsVisitor implements Visitor {
-
-		private final Trip trip;
-		private final Set<Visit> done = new HashSet<>();
-		
-		public BeeAsVisitor(Trip trip) {
-			this.trip = trip;
-		}
-		
-		@Override
-		public boolean canVisit(Locator location) {
-			for (WebSite site : sites) {
-				if (site.contains(location)) {
-					return true;
-				}
-			}
-			return false;
-		}
-		
-		@Override
-		public boolean canVisit(Locator location, int distance) {
-			if (distance > trip.getDistanceLimit()) {
-				return false;
-			}
-			return canVisit(location);
-		}
-
-		@Override
-		public boolean hasDone(Locator location) {
-			Visit visit = getVisitMap().findVisit(location);
-			if (visit == null) {
-				return false;
-			}
-			return this.done.contains(visit);
-		}
-		
-		@Override
-		public void addDone(Visit visit) {
-			if (visit != null) {
-				this.done.add(visit);
-			}
-		}
-
-		@Override
-		public WebDownloader getDownloader() {
-			return downloader;
-		}
-
-		@Override
-		public Hive getHive() {
-			return hive;
-		}
-
-		@Override
-		public VisitMap getVisitMap() {
-			return visitMap;
-		}
-
-		@Override
-		public Predicate<Link> getExternalResourceLinkPredicate() {
-			return trip.getExternalResourceLinkPredicate();
-		}
-		
-		@Override
-		public Predicate<Link> getHyperlinkPredicate() {
-			return trip.getHyperlinkPredicate();
-		}
-		
-		@Override
-		public void notifyEvent(Consumer<BeeEventHandler> consumer) {
-			handlers.stream().forEach(consumer);
-		}
-	}
-	
 	private class BeeAsTripper extends Tripper {
 
-		public BeeAsTripper(Trip trip, WebDownloader downloader) {
-			super(trip, downloader);
+		public BeeAsTripper(Trip trip, WebDownloader downloader, Hive hive, History history) {
+			super(trip, downloader, hive, history);
 		}
 		
 		@Override
@@ -206,12 +113,7 @@ public class Bee {
 			}
 			return false;
 		}
-
-		@Override
-		protected Hive getHive() {
-			return hive;
-		}
-
+		
 		@Override
 		protected void report(Consumer<BeeEventHandler> action) {
 			handlers.stream().forEach(action);
