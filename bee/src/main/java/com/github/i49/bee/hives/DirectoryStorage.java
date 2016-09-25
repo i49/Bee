@@ -36,11 +36,6 @@ public class DirectoryStorage implements Storage {
 	}
 
 	@Override
-	public boolean isDirectory() {
-		return true;
-	}
-	
-	@Override
 	public FileTime getLastModifiedTime(String path) throws IOException {
 		return Files.getLastModifiedTime(resolve(path));
 	}

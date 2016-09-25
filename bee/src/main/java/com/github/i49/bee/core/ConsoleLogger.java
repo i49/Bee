@@ -52,14 +52,14 @@ public class ConsoleLogger implements BeeEventHandler {
 	@Override
 	public void handleVisitSkipped(Visit v, Exception e) {
 		StringBuilder b = builderFor(v);
-		b.append("Skipped visited ").append("<").append(v.getLocation()).append(">");
+		b.append("Skipped once visited ").append("<").append(v.getLocation()).append(">");
 		log.warn(b.toString());
 	}
 	
 	@Override
 	public void handleLinkStarted(Found f) {
 		StringBuilder b = builderFor(f);
-		b.append("Rewriting ");
+		b.append("Rewrites ");
 		appendLinkLocation(b, f);
 		log.info(b.toString());
 	}

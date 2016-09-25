@@ -2,8 +2,6 @@
 package com.github.i49.bee.core;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -14,12 +12,11 @@ import org.apache.commons.logging.LogFactory;
 import com.github.i49.bee.hives.DefaultHive;
 import com.github.i49.bee.hives.Hive;
 import com.github.i49.bee.hives.Linker;
-import com.github.i49.bee.hives.Storage;
+import com.github.i49.bee.web.BasicWebDownloader;
 import com.github.i49.bee.web.Locator;
 import com.github.i49.bee.web.WebContentException;
 import com.github.i49.bee.web.WebDownloader;
 import com.github.i49.bee.web.WebResource;
-import com.github.i49.bee.web.CachingWebDownloader;
 
 /**
  * Bee who visits web sites.
@@ -55,23 +52,21 @@ public class Bee {
 	
 	public void launch() throws BeeException {
 		try {
-			History history = new History();
-			resetForTrips();
-			makeAllTrips(history);
-			rewriteLinks(history);
+			reset().makeAllTrips(new History());
 		} catch (Exception e) {
 			throw new BeeException(e);
 		}
 	}
 	
 	protected void makeAllTrips(History history) throws Exception {
-		int tripNo = 1;
-		try (Hive hive = openHive(); WebDownloader downloader = createWebDownloader(hive)) {
-			for (Trip trip : this.trips) {
-				Tripper tripper = new BeeAsTripper(tripNo, trip, downloader, hive, history);
-				tripper.makeTrip();
-				tripNo++;
+		try (Hive hive = openHive()) {
+			try (WebDownloader downloader = createWebDownloader(hive)) {
+				int tripNo = 1;
+				for (Trip trip : this.trips) {
+					new BeeAsTripper(tripNo++, trip, downloader, hive, history).makeTrip();
+				}
 			}
+			rewriteLinks(history);
 		}
 	}
 
@@ -97,26 +92,17 @@ public class Bee {
 	}
 
 	protected WebDownloader createWebDownloader(Hive hive) {
-		Path pathToCache = getCacheDirectoryForHive(hive);
-		WebDownloader downloader = new CachingWebDownloader(pathToCache);
+		WebDownloader downloader = new BasicWebDownloader();
 		return downloader;
-	}
-	
-	private static Path getCacheDirectoryForHive(Hive hive) {
-		Storage storage = hive.getStorage();
-		if (storage.isDirectory()) {
-			return hive.getBasePath().resolve(".bee");
-		} else {
-			return Paths.get(hive.getBasePath().toString() + ".bee");
-		}
 	}
 	
 	protected void addDefaultEventHandlers() {
 		this.handlers.add(new ConsoleLogger());
 	}
 	
-	protected void resetForTrips() {
+	protected Bee reset() {
 		this.nextResourceNo = 1;
+		return this;
 	}
 	
 	protected void report(Consumer<BeeEventHandler> action) {

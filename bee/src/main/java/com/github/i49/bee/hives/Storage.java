@@ -10,8 +10,6 @@ public interface Storage {
 	
 	void close() throws IOException;
 
-	boolean isDirectory();
-	
 	FileTime getLastModifiedTime(String path) throws IOException;
 
 	byte[] read(String path) throws IOException;
