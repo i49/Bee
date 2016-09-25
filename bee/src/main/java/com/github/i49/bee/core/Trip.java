@@ -9,6 +9,8 @@ public class Trip {
 	private final String startingPoint;
 	private final int distanceLimit;
 
+	private int tripNo;
+	
 	private final LinkStrategy linkStrategy = LinkStrategy.createDefault();
 	
 	/**
@@ -20,7 +22,7 @@ public class Trip {
 		this.startingPoint = startingPoint.trim();
 		this.distanceLimit = distanceLimit;
 	}
-
+	
 	/**
 	 * Returns starting point of this trip.
 	 * @return starting point
@@ -39,5 +41,13 @@ public class Trip {
 
 	public LinkStrategy getLinkStrategy() {
 		return linkStrategy;
+	}
+
+	public int getTripNo() {
+		return tripNo;
+	}
+
+	public void setTripNo(int tripNo) {
+		this.tripNo = tripNo;
 	}
 }

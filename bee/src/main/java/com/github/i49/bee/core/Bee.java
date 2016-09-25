@@ -46,8 +46,12 @@ public class Bee {
 		return sites;
 	}
 	
-	public List<BeeEventHandler> getEventHandlers() {
-		return handlers;
+	public void addEventHandler(BeeEventHandler handler) {
+		handlers.add(handler);
+	}
+ 	
+	public void removeEventHandler(BeeEventHandler handler) {
+		handlers.remove(handler);
 	}
 	
 	public void launch() throws BeeException {
@@ -60,10 +64,11 @@ public class Bee {
 	
 	protected void makeAllTrips(History history) throws Exception {
 		try (Hive hive = openHive()) {
-			try (WebDownloader downloader = createWebDownloader(hive)) {
+			try (WebDownloader downloader = createWebDownloader()) {
 				int tripNo = 1;
 				for (Trip trip : this.trips) {
-					new BeeAsTripper(tripNo++, trip, downloader, hive, history).makeTrip();
+					trip.setTripNo(tripNo++);
+					new BeeAsTripper(trip, downloader, hive, history).makeTrip();
 				}
 			}
 			rewriteLinks(history);
@@ -91,13 +96,12 @@ public class Bee {
 		return this.hive;
 	}
 
-	protected WebDownloader createWebDownloader(Hive hive) {
-		WebDownloader downloader = new BasicWebDownloader();
-		return downloader;
+	protected WebDownloader createWebDownloader() {
+		return new BasicWebDownloader();
 	}
 	
 	protected void addDefaultEventHandlers() {
-		this.handlers.add(new ConsoleLogger());
+		addEventHandler(new ConsoleLogger());
 	}
 	
 	protected Bee reset() {
@@ -111,8 +115,8 @@ public class Bee {
 	
 	private class BeeAsTripper extends Tripper {
 
-		public BeeAsTripper(int tripNo, Trip trip, WebDownloader downloader, Hive hive, History history) {
-			super(tripNo, trip, downloader, hive, history);
+		public BeeAsTripper(Trip trip, WebDownloader downloader, Hive hive, History history) {
+			super(trip, downloader, hive, history);
 		}
 		
 		@Override
@@ -134,6 +138,16 @@ public class Bee {
 		@Override
 		protected void report(Consumer<BeeEventHandler> action) {
 			Bee.this.report(action);
+		}
+		
+		@Override
+		protected void addEventHandler(BeeEventHandler handler) {
+			Bee.this.addEventHandler(handler);
+		}
+
+		@Override
+		protected void removeEventHandler(BeeEventHandler handler) {
+			Bee.this.removeEventHandler(handler);
 		}
 	}
 }

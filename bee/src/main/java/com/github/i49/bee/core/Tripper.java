@@ -18,7 +18,6 @@ import com.github.i49.bee.web.WebResource;
 
 public abstract class Tripper {
 
-	private final int tripNo;
 	private final Trip trip;
 	private final WebDownloader downloader;
 	private final Hive hive;
@@ -26,9 +25,9 @@ public abstract class Tripper {
 	
 	private int nextVisitNo;
 	private final LinkedList<Visit> visits = new LinkedList<>();
+	private final StatisticsCollector statsCollector = new StatisticsCollector();
 	
-	public Tripper(int tripNo, Trip trip, WebDownloader downloader, Hive hive, History history) {
-		this.tripNo = tripNo;
+	public Tripper(Trip trip, WebDownloader downloader, Hive hive, History history) {
 		this.trip = trip;
 		this.downloader = downloader;
 		this.hive = hive;
@@ -41,8 +40,14 @@ public abstract class Tripper {
 		if (location == null) {
 			return;
 		}
+
 		visits.addFirst(newVisit(location, 0));
+
+		report(x->x.handleTripStarted(trip));
+		addEventHandler(statsCollector);
 		visitAll();
+		removeEventHandler(statsCollector);
+		report(x->x.handleTripCompleted(trip, statsCollector));
 	}
 	
 	private void visitAll() {
@@ -55,10 +60,6 @@ public abstract class Tripper {
 		try {
 			tryVisit(v);
 			addVisitsAfter(v);
-		} catch (VisitedException e) {
-			v.setFoundOf(e.getEarlierVisit());
-			report(x->x.handleVisitSkipped(v, e));
-			addVisitsAfter(v);
 		} catch (WebException e) {
 			report(x->x.handleDownloadFailed(v, e));
 		} catch (HiveException e) {
@@ -67,8 +68,19 @@ public abstract class Tripper {
 			history.addVisit(v);
 		}
 	}
-
-	private void tryVisit(Visit v) throws WebException, HiveException, VisitedException {
+	
+	private void tryVisit(Visit v) throws WebException, HiveException {
+		try {
+			report(x->x.handleVisitStarted(v));
+			tryFirstVisit(v);
+			report(x->x.handleVisitCompleted(v));
+		} catch (VisitedException e) {
+			v.setFoundOf(e.getEarlierVisit());
+			report(x->x.handleVisitSkipped(v, e));
+		}
+	}
+	
+	private void tryFirstVisit(Visit v) throws WebException, HiveException, VisitedException {
 		assertFirstVisit(v.getLocation());
 		WebResource resource = retrieveResource(v);
 		if (resource instanceof LinkSourceResource) {
@@ -118,7 +130,7 @@ public abstract class Tripper {
 	
 	private Visit newVisit(Locator location, int distance) {
 		int visitNo = this.nextVisitNo++;
-		return new Visit(this.tripNo, visitNo, location, distance);
+		return new Visit(trip.getTripNo(), visitNo, location, distance);
 	}
 	
 	private void addVisitsAfter(Visit v) {
@@ -151,18 +163,8 @@ public abstract class Tripper {
 	protected abstract Found newFound(WebResource resource);
 	
 	protected abstract void report(Consumer<BeeEventHandler> action);
-
-	private static class VisitedException extends Exception {
-
-		private static final long serialVersionUID = 1L;
-		private final Visit earlier;
-		
-		public VisitedException(Visit earlier) {
-			this.earlier = earlier;
-		}
-		
-		public Visit getEarlierVisit() {
-			return earlier;
-		}
-	}
+	
+	protected abstract void addEventHandler(BeeEventHandler handler);
+	
+	protected abstract void removeEventHandler(BeeEventHandler handler);
 }
