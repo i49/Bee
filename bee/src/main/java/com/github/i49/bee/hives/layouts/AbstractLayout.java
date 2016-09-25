@@ -20,6 +20,8 @@ public abstract class AbstractLayout implements Layout {
 	
 	private final Map<Locator, String> cache = new HashMap<>();
 	private final Set<String> directories = new HashSet<>();
+
+	private final Map<String, DirectoryConfiguration> directoryConfigurations = new HashMap<>();
 	
 	protected AbstractLayout() {
 	}
@@ -52,6 +54,16 @@ public abstract class AbstractLayout implements Layout {
 			}
 		}
 		return localPath;
+	}
+	
+	@Override
+	public DirectoryConfiguration getDirectoryConfiguration(String path) {
+		DirectoryConfiguration c = this.directoryConfigurations.get(path);
+		if (c == null) {
+			c = new DirectoryConfigurationImpl(path);
+			this.directoryConfigurations.put(path, c);
+		}
+		return c;
 	}
 	
 	protected String adjustPath(String path) {
@@ -95,4 +107,22 @@ public abstract class AbstractLayout implements Layout {
 	}
 	
 	abstract protected String doMapPath(Locator location);
+
+	private static class DirectoryConfigurationImpl implements DirectoryConfiguration {
+
+		private final String path;
+		private Map<String, Object> properties = new HashMap<>();
+		
+		public DirectoryConfigurationImpl(String path) {
+			this.path = path;
+		}
+		
+		public String getPath() {
+			return path;
+		}
+		
+		public Map<String, Object> getProperties() {
+			return properties;
+		}
+	}
 }

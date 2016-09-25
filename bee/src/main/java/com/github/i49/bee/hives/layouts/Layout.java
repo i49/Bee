@@ -9,4 +9,6 @@ public interface Layout {
 	boolean find(Locator remotePath);
 
 	String mapPath(Locator rmeotePath);
+	
+	DirectoryConfiguration getDirectoryConfiguration(String path);
 }

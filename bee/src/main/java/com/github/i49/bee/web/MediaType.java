@@ -17,7 +17,8 @@ public enum MediaType {
 	APPLICATION_RDF_XML("application", "rdf+xml"),
 	IMAGE_PNG("image", "png"),
 	IMAGE_JPEG("image", "jpeg"),
-	IMAGE_GIF("image", "gif");
+	IMAGE_GIF("image", "gif"),
+	IMAGE_SVG_XML("image", "svg+xml");
 
 	private final String type;
 	private final String subtype;
