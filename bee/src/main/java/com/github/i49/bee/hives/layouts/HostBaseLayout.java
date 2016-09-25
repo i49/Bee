@@ -1,4 +1,4 @@
-package com.github.i49.bee.hives;
+package com.github.i49.bee.hives.layouts;
 
 import com.github.i49.bee.web.Locator;
 

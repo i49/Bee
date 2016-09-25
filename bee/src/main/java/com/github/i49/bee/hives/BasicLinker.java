@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.i49.bee.hives.layouts.Layout;
 import com.github.i49.bee.web.HtmlWebResource;
 import com.github.i49.bee.web.Link;
 import com.github.i49.bee.web.LinkSourceResource;
