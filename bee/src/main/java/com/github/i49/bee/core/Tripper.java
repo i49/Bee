@@ -92,9 +92,10 @@ public abstract class Tripper {
 	private WebResource retrieveResource(Visit v) throws WebException, VisitedException {
 		report(x->x.handleDownloadStarted(v));
 		WebResource resource = this.downloader.download(v.getLocation());
+		v.setDownloaded(resource.getMetadata());
+		report(x->x.handleDownloadCompleted(v));
 		assertFirstVisit(resource.getMetadata().getLocation());
 		v.setFound(newFound(resource));
-		report(x->x.handleDownloadCompleted(v));
 		return resource;
 	}
 	
@@ -139,15 +140,20 @@ public abstract class Tripper {
 		}
 		Found found = v.getFound();
 		int nextDistance = v.getDistance() + 1;
-		int i = 0;
-		for (Locator location : found.getExternalResourceLinks()) {
-			this.visits.add(i++, newVisit(location, nextDistance));
-		}
+		int pos = addVisits(0, found.getExternalResourceLinks(), nextDistance);
 		if (nextDistance <= this.trip.getDistanceLimit()) {
-			for (Locator location : found.getHyperlinks()) {
-				this.visits.add(i++, newVisit(location, nextDistance));
+			addVisits(pos, found.getHyperlinks(), nextDistance);
+		}
+	}
+	
+	private int addVisits(int pos, List<Locator> locations, int distance) {
+		for (Locator location : locations) {
+			Visit visited = history.recallVisit(location);
+			if (visited == null || !visited.hasFound() || visited.getFound().hasLinks()) {
+				this.visits.add(pos++, newVisit(location, distance));
 			}
 		}
+		return pos;
 	}
 	
 	protected Predicate<Link> getHyperlinkSelector() {

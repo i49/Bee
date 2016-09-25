@@ -47,6 +47,10 @@ public class Found {
 		return this;
 	}
 
+	public boolean hasLinks() {
+		return !hyperlinks.isEmpty() || !externalResourceLinks.isEmpty(); 
+	}
+	
 	public List<Locator> getHyperlinks() {
 		return hyperlinks;
 	}

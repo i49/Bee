@@ -1,6 +1,7 @@
 package com.github.i49.bee.core;
 
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
 
 public class Visit {
 
@@ -8,6 +9,7 @@ public class Visit {
 	private final int visitNo;
 	private final Locator initialLocation;
 	private final int distance;
+	private ResourceMetadata downloaded;
 	private Found found;
 	
 	public Visit(int tripNo, int visitNo, Locator location, int distance) {
@@ -28,6 +30,8 @@ public class Visit {
 	public Locator getLocation() {
 		if (hasFound()) {
 			return getFound().getMetadata().getLocation();
+		} else if (downloaded != null) {
+			return downloaded.getLocation();
 		} else {
 			return getInitialLocation();
 		}
@@ -43,6 +47,14 @@ public class Visit {
 	
 	public int getDistance() {
 		return distance;
+	}
+	
+	public ResourceMetadata getDownloaded() {
+		return downloaded;
+	}
+	
+	public void setDownloaded(ResourceMetadata downloaded) {
+		this.downloaded = downloaded;
 	}
 
 	public boolean hasFound() {

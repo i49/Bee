@@ -32,7 +32,7 @@ public class ConsoleLogger implements BeeEventHandler {
 	public void handleVisitSkipped(Visit v, Exception e) {
 		StringBuilder b = builderFor(v);
 		b.append("Skipped once visited ").append("<").append(v.getLocation()).append(">");
-		log.warn(b);
+		log.info(b);
 	}
 	
 	@Override
@@ -45,9 +45,12 @@ public class ConsoleLogger implements BeeEventHandler {
 	@Override
 	public void handleDownloadCompleted(Visit v) {
 		StringBuilder b = builderFor(v);
-		b.append("Downloaded <").append(v.getLocation()).append(">");
-		ResourceMetadata metadata = v.getFound().getMetadata();
-		b.append(" (").append(metadata.getMediaType()).append(")");
+		ResourceMetadata m = v.getDownloaded();
+		b.append("Downloaded <").append(m.getLocation()).append(">");
+		if (v.isRedirected()) {
+			b.append(" [REDIRECTED]");
+		}
+		b.append(" (").append(m.getMediaType()).append(")");
 		log.info(b);
 	}
 
