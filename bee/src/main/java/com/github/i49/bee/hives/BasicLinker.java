@@ -60,10 +60,10 @@ public class BasicLinker implements Linker {
 	private Map<Locator, Locator> createRewriteMap(String sourcePath, Collection<Link> links) {
 		Locator basePath = Locator.pathOf(sourcePath).getParent();
 		Map<Locator, Locator> map = new HashMap<>();
-		for (Link link  : links) {
+		for (Link link: links) {
 			Locator remote = link.getLocation();
-			if (this.layout.find(remote)) {
-				final String local = this.layout.mapPath(getRedirected(remote));
+			final String local = this.layout.getMappedPath(getRedirected(remote));
+			if (local != null) {
 				Locator targetPath = Locator.pathOf(local);
 				Locator relativePath = basePath.relativize(targetPath);
 				map.put(remote, relativePath);

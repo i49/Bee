@@ -13,6 +13,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.github.i49.bee.hives.layouts.Layout;
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.ResourceMetadata;
 import com.github.i49.bee.web.ResourceSerializer;
 import com.github.i49.bee.web.WebResource;
 
@@ -93,7 +94,8 @@ public abstract class AbstractHive implements Hive {
 	}
 	
 	private String tryStore(WebResource resource) throws Exception {
-		final String localPath = this.layout.mapPath(resource.getMetadata().getLocation());
+		ResourceMetadata metadata = resource.getMetadata();
+		final String localPath = this.layout.mapPath(metadata.getLocation(), metadata.getMediaType());
 		byte[] bytes = serializeResource(resource);
 		FileTime lastModified = FileTime.from(resource.getMetadata().getLastModified().toInstant());
 		this.storage.write(localPath, bytes, lastModified);

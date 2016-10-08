@@ -1,9 +1,5 @@
 package com.github.i49.bee.hives.layouts;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Collectors;
-
 public class CellEntry {
 
 	private final String name;
@@ -22,16 +18,20 @@ public class CellEntry {
 		return parent;
 	}
 	
-	public List<CellEntry> getAncestors() {
-		LinkedList<CellEntry> result = new LinkedList<>();
-		for (CellEntry entry = this; entry != null; entry = entry.getParent()) {
-			result.addFirst(entry);
+	public boolean isRoot() {
+		return (this.parent == null);
+	}
+	
+	public String getPath() {
+		if (isRoot()) {
+			return getName();
+		} else {
+			return getParent().getPath() + "/" + getName();
 		}
-		return result;
 	}
 	
 	@Override
 	public String toString() {
-		return getAncestors().stream().map(CellEntry::getName).collect(Collectors.joining("/"));
+		return getPath();
 	}
 }

@@ -1,11 +1,12 @@
 package com.github.i49.bee.hives.layouts;
 
 import com.github.i49.bee.web.Locator;
+import com.github.i49.bee.web.MediaType;
 
 public class HostBaseLayout extends AbstractLayout {
 
 	@Override
-	protected String doMapPath(Locator location) {
+	protected String doMapPath(Locator location, MediaType mediaType) {
 		StringBuilder builder = new StringBuilder(createPrefix(location));
 		builder.append(location.getPath());
 		return builder.toString();
