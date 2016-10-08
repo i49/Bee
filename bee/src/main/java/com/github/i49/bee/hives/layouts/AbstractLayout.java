@@ -14,6 +14,8 @@ public abstract class AbstractLayout implements Layout {
 	
 	private final Map<Locator, String> mapped = new HashMap<>();
 	private final Cell root = Cell.rootCell();
+	
+	private final ExtensionMapper extensionMapper = new ExtensionMapper();
 
 	private final Map<String, DirectoryConfiguration> directoryConfigurations = new HashMap<>();
 	
@@ -66,16 +68,20 @@ public abstract class AbstractLayout implements Layout {
 		if (localPath == null) {
 			return null;
 		}
-		localPath = modifyPath(localPath);
+		localPath = modifyPath(localPath, mediaType);
 		this.root.addHoney(localPath);
 		return localPath;
 	}
 
-	protected String modifyPath(String localPath) {
+	protected String modifyPath(String localPath, MediaType mediaType) {
 		if (localPath.endsWith("/")) {
 			localPath += this.indexName;
 		}
-		return localPath;
+		return modifyExtension(localPath, mediaType);
+	}
+	
+	protected String modifyExtension(String localPath, MediaType mediaType) {
+		return this.extensionMapper.mapExtension(localPath, mediaType);
 	}
 	
 	protected Cell getCell(String localPath) throws NotCellException {

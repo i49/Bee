@@ -5,21 +5,21 @@ import java.util.Map;
 
 public enum MediaType {
 	
-	TEXT_PLAIN("text", "plain"),
-	TEXT_HTML("text", "html"),
-	TEXT_CSS("text", "css"),
-	TEXT_JAVASCRIPT("text", "javascript"),
-	TEXT_TURTLE("text", "turtle"),
 	APPLICATION_XHTML_XML("appliaction", "xhtml+xml"),
 	APPLICATION_XML("application", "xml"),
 	APPLICATION_JAVASCRIPT("application", "javascript"),
 	APPLICATION_JSON("application", "json"),
 	APPLICATION_RDF_XML("application", "rdf+xml"),
-	IMAGE_PNG("image", "png"),
-	IMAGE_JPEG("image", "jpeg"),
 	IMAGE_GIF("image", "gif"),
-	IMAGE_SVG_XML("image", "svg+xml");
-
+	IMAGE_JPEG("image", "jpeg"),
+	IMAGE_PNG("image", "png"),
+	IMAGE_SVG_XML("image", "svg+xml"),
+	TEXT_CSS("text", "css"),
+	TEXT_HTML("text", "html"),
+	TEXT_JAVASCRIPT("text", "javascript"),
+	TEXT_PLAIN("text", "plain"),
+	TEXT_TURTLE("text", "turtle");
+	
 	private final String type;
 	private final String subtype;
 	
