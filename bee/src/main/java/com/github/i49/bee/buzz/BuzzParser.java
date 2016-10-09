@@ -2,13 +2,7 @@ package com.github.i49.bee.buzz;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,11 +10,25 @@ import com.github.i49.bee.core.Bee;
 import com.github.i49.bee.core.Trip;
 import com.github.i49.bee.core.WebSite;
 
+import static com.github.i49.bee.buzz.JsonValidator.*;
+
 public class BuzzParser {
 
-	private static final Log log = LogFactory.getLog(BuzzParser.class);
+	private static final Fields ROOT_FIELDS = fields(
+		required("trips"), required("sites"), required("hive")
+	);
 	
-	public Bee parseBuzz(File file) {
+	private static final Fields TRIP_FIELDS = fields(
+		required("location"), optional("distance")
+	);
+	
+	private static final Fields SITE_FIELDS = fields(
+		required("host"), optional("port"), optional("includes"), optional("excludes")
+	);
+
+	private final JsonValidator v = new JsonValidator();
+	
+	public Bee parseBuzz(File file) throws BuzzException {
 		JsonNode rootNode = loadJson(file);
 		if (rootNode != null) {
 			return configureBee(new Bee(), rootNode);
@@ -29,55 +37,43 @@ public class BuzzParser {
 		}
 	}
 
-	private JsonNode loadJson(File source) {
+	private JsonNode loadJson(File source) throws BuzzException {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			return mapper.readTree(source);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
+		} catch (Exception e) {
+			throw new BuzzException(e);
 		}
 	}
 	
-	private Bee configureBee(Bee bee, JsonNode node) {
-		Set<String> supported = fields("seeds", "sites", "hive");
-		Set<String> required = fields("seeds", "sites", "hive");
-		validateNode(node, supported, required);
+	private Bee configureBee(Bee bee, JsonNode node) throws BuzzException {
+
+		v.validate(node, ROOT_FIELDS);
 		
-		JsonNode seedsNode = node.get("seeds");
-		if (seedsNode != null) {
-			if (seedsNode.isArray()) {	
-				configureSeeds(bee.getTrips(), seedsNode);
-			}
-		}
+		JsonNode tripsNode = node.get("trips");
+		v.validateArray(tripsNode, "trips");
+		configureTrips(bee.getTrips(), tripsNode);
 		
 		JsonNode sitesNode = node.get("sites");
-		if (sitesNode != null) {
-			if (sitesNode.isArray()) {
-				configureSites(bee.getSites(), sitesNode);
-			}
-		}
+		v.validateArray(sitesNode, "sites");
+		configureSites(bee.getSites(), sitesNode);
 
 		return bee;
 	}
 	
-	private void configureSeeds(List<Trip> seeds, JsonNode nodes) {
-		Set<String> supported = fields("location", "distance");
-		Set<String> required = fields("location");
+	private void configureTrips(List<Trip> trips, JsonNode nodes) throws BuzzException {
 		for (JsonNode node : nodes) {
-			validateNode(node, supported, required);
+			v.validate(node, TRIP_FIELDS);
 			String location = node.path("location").textValue();
-			int distance = node.path("distance").intValue();
+			int distance = node.path("distance").asInt(0);
 			Trip seed = new Trip(location, distance); 
-			seeds.add(seed);
+			trips.add(seed);
 		}
 	}
 	
-	private void configureSites(List<WebSite> sites, JsonNode nodes) {
-		Set<String> supported = fields("host", "port", "includes", "excludes");
-		Set<String> required = fields("host");
+	private void configureSites(List<WebSite> sites, JsonNode nodes) throws BuzzException {
 		for (JsonNode node : nodes) {
-			validateNode(node, supported, required);
+			v.validate(node, SITE_FIELDS);
 			String host = node.path("host").textValue();
 			int port = -1;
 			if (node.hasNonNull("port")) {
@@ -95,31 +91,6 @@ public class BuzzParser {
 			for (JsonNode node : nodes) {
 				String path = node.textValue().trim();
 				directories.add(path);
-			}
-		}
-	}
-	
-	private static Set<String> fields(String...names) {
-		Set<String> set = new HashSet<>();
-		for (String name : names) {
-			set.add(name);
-		}
-		return set;
-	}
-
-	private void validateNode(JsonNode node, Set<String> supported, Set<String> required) {
-		Iterator<String> it = node.fieldNames();
-		while (it.hasNext()) {
-			String name = it.next();
-			if (!supported.contains(name)) {
-				log.error("JSON field \"" + name + "\" is not supported.");
-			}
-		}
-		if (required != null) {
-			for (String name: required) {
-				if (!node.hasNonNull(name)) {
-					log.error("Required JSON field \"" + name +"\" is missing.");
-				}
 			}
 		}
 	}

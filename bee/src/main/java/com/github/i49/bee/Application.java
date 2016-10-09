@@ -22,7 +22,9 @@ public class Application implements ApplicationRunner {
 	@Override
 	public void run(ApplicationArguments args) {
 		try {
-			bee.launch();
+			if (bee != null) {
+				bee.launch();
+			}
 		} catch (BeeException e) {
 			log.error(e.getMessage());
 		}

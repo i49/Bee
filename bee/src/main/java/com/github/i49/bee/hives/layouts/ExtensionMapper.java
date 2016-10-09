@@ -1,13 +1,13 @@
 package com.github.i49.bee.hives.layouts;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 
 import com.github.i49.bee.web.MediaType;
 
 public class ExtensionMapper {
 
-	private final Map<MediaType, String> map = new HashMap<>();
+	private final EnumMap<MediaType, String> map = new EnumMap<>(MediaType.class);
 	
 	public ExtensionMapper() {
 		setUpMap(this.map);
