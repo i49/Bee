@@ -1,8 +1,8 @@
-package com.github.i49.bee.buzz;
+package com.github.i49.bee.common.json;
 
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 
-public class TypeMismatchException extends BuzzException {
+public class TypeMismatchException extends ValidatorException {
 
 	private static final long serialVersionUID = 1L;
 

@@ -1,6 +1,6 @@
-package com.github.i49.bee.buzz;
+package com.github.i49.bee.common.json;
 
-public class MissingFieldException extends BuzzException {
+public class MissingFieldException extends ValidatorException {
 
 	private static final long serialVersionUID = 1L;
 	private final String fieldName;

@@ -1,6 +1,6 @@
-package com.github.i49.bee.buzz;
+package com.github.i49.bee.common.json;
 
-public class UnknownFieldException extends BuzzException {
+public class UnknownFieldException extends ValidatorException {
 
 	private static final long serialVersionUID = 1L;
 	private final String fieldName;
