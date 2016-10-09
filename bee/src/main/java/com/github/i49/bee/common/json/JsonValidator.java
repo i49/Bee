@@ -8,7 +8,6 @@ import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
-import com.github.i49.bee.buzz.BuzzException;
 
 public abstract class JsonValidator {
 
@@ -40,7 +39,7 @@ public abstract class JsonValidator {
 	
 	private void validateObject(JsonNode node, ObjectType type) throws ValidatorException {
 		
-		for (Property p: type.required) {
+		for (Property p: type.required()) {
 			if (!node.hasNonNull(p.getName())) {
 				throw new MissingFieldException(p.getName());
 			}
@@ -50,10 +49,11 @@ public abstract class JsonValidator {
 		while (it.hasNext()) {
 			Map.Entry<String, JsonNode> entry = it.next();
 			String name = entry.getKey();
-			if (!type.all.containsKey(name)) {
+			if (type.containsProperty(name)) {
+				validate(name, entry.getValue(), type.getProperty(name).getType());
+			} else {
 				throw new UnknownFieldException(name);
 			}
-			validate(name, entry.getValue(), type.getProperty(name).getType());
 		}
 	}
 	
@@ -126,9 +126,17 @@ public abstract class JsonValidator {
 				}
 			}
 		}
+
+		public boolean containsProperty(String name) {
+			return all.containsKey(name); 
+		}
 		
 		public Property getProperty(String name) {
 			return this.all.get(name);
+		}
+		
+		public Iterable<Property> required() {
+			return required;
 		}
 	}
 	
