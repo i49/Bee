@@ -1,17 +1,50 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <!-- The Basics -->
+
   <groupId>com.github.i49</groupId>
   <artifactId>bee</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
   <properties>
   	<maven.compiler.source>1.8</maven.compiler.source>
   	<maven.compiler.target>1.8</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <parent>
   	<groupId>org.springframework.boot</groupId>
   	<artifactId>spring-boot-starter-parent</artifactId>
   	<version>1.3.6.RELEASE</version>
   </parent>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>nu.validator.htmlparser</groupId>
+      <artifactId>htmlparser</artifactId>
+      <version>1.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.i49</groupId>
+      <artifactId>hibiscus</artifactId>
+      <version>0.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.johnzon</groupId>
+      <artifactId>johnzon-core</artifactId>
+      <version>1.0.0</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+
+  <!-- Build Settings -->
+
   <build>
     <plugins>
       <plugin>
@@ -20,23 +53,24 @@
       </plugin>
     </plugins>
   </build>
-  <dependencies>
-  	<dependency>
-  		<groupId>org.springframework.boot</groupId>
-  		<artifactId>spring-boot-starter</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>com.fasterxml.jackson.core</groupId>
-  		<artifactId>jackson-databind</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>nu.validator.htmlparser</groupId>
-  		<artifactId>htmlparser</artifactId>
-  		<version>1.4</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.apache.httpcomponents</groupId>
-  		<artifactId>httpclient</artifactId>
-  	</dependency>
-  </dependencies>
+
+  <!-- Project Information -->
+
+  <name>Bee</name>
+  <description>Bee is a web crawler</description>
+  <url>https://github.com/i49/Bee</url>
+  <inceptionYear>2016</inceptionYear>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>manual</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:https://github.com/i49/Bee.git</connection>
+    <developerConnection>scm:git@github.com:i49/Bee.git</developerConnection>
+    <url>https://github.com/i49/Bee</url>  
+  </scm>
+
 </project>

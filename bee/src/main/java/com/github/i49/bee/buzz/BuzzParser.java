@@ -1,24 +1,31 @@
 package com.github.i49.bee.buzz;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonString;
+import javax.json.JsonValue;
+
 import com.github.i49.bee.core.Bee;
 import com.github.i49.bee.core.Trip;
 import com.github.i49.bee.core.WebSite;
+import com.github.i49.hibiscus.validation.JsonValidator;
+import com.github.i49.hibiscus.validation.ValidationResult;
 
 public class BuzzParser {
+	
+	private final JsonValidator validator = new BuzzJsonValidator();
 
 	public Bee parseBuzz(File file) throws BuzzException {
 		try {
-			JsonNode rootNode = loadJson(file);
-			new BuzzJsonValidator().validate(rootNode);
-			if (rootNode != null) {
-				return configureBee(new Bee(), rootNode);
+			JsonObject root = readJson(file);
+			if (root != null) {
+				return configureBee(new Bee(), root);
 			} else {
 				return null;
 			}
@@ -27,48 +34,57 @@ public class BuzzParser {
 		}
 	}
 
-	private JsonNode loadJson(File source) throws JsonProcessingException, IOException {
-		ObjectMapper mapper = new ObjectMapper();
-		return mapper.readTree(source);
+	private JsonObject readJson(File source) throws IOException {
+		try (Reader reader = new FileReader(source)) {
+			ValidationResult result = validator.validate(reader);
+			if (result.hasProblems()) {
+				return null;
+			} else {
+				return (JsonObject)result.getValue();
+			}
+		}
 	}
 	
-	private Bee configureBee(Bee bee, JsonNode node) {
-		JsonNode tripsNode = node.get("trips");
-		configureTrips(bee.getTrips(), tripsNode);
+	private Bee configureBee(Bee bee, JsonObject rootObject) {
+		JsonArray trips = rootObject.getJsonArray("trips");
+		configureTrips(bee.getTrips(), trips);
 		
-		JsonNode sitesNode = node.get("sites");
-		configureSites(bee.getSites(), sitesNode);
+		JsonArray sites = rootObject.getJsonArray("sites");
+		configureSites(bee.getSites(), sites);
 
 		return bee;
 	}
 	
-	private void configureTrips(List<Trip> trips, JsonNode nodes) {
-		for (JsonNode node : nodes) {
-			String location = node.path("location").textValue();
-			int distance = node.path("distance").asInt(0);
+	private void configureTrips(List<Trip> trips, JsonArray array) {
+		for (JsonValue e : array) {
+			JsonObject o = (JsonObject)e;
+			String location = o.getString("location");
+			int distance = o.getInt("distance", 0);
 			Trip seed = new Trip(location, distance); 
 			trips.add(seed);
 		}
 	}
 	
-	private void configureSites(List<WebSite> sites, JsonNode nodes) {
-		for (JsonNode node : nodes) {
-			String host = node.path("host").textValue();
+	private void configureSites(List<WebSite> sites, JsonArray array) {
+		for (JsonValue e : array) {
+			JsonObject o = (JsonObject)e;
+			String host = o.getString("host");
 			int port = -1;
-			if (node.hasNonNull("port")) {
-				port = node.get("port").intValue();
+			if (o.containsKey("port") && !o.isNull("port")) {
+				port = o.getInt("port");
 			}
 			WebSite site = new WebSite(host, port);
-			configureSiteDirectories(site.getIncludes(), node.get("includes"));
-			configureSiteDirectories(site.getExcludes(), node.get("excludes"));
+			configureSiteDirectories(site.getIncludes(), o.getJsonArray("includes"));
+			configureSiteDirectories(site.getExcludes(), o.getJsonArray("excludes"));
 			sites.add(site);
 		}
 	}
 	
-	private void configureSiteDirectories(List<String> directories, JsonNode nodes) {
-		if (nodes != null && nodes.isArray()) {
-			for (JsonNode node : nodes) {
-				String path = node.textValue().trim();
+	private void configureSiteDirectories(List<String> directories, JsonArray array) {
+		if (array != null) {
+			for (JsonValue e : array) {
+				JsonString s = (JsonString)e;
+				String path = s.getString().trim();
 				directories.add(path);
 			}
 		}

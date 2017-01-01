@@ -1,19 +1,21 @@
 package com.github.i49.bee.buzz;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.github.i49.bee.common.json.JsonValidator;
-import com.github.i49.bee.common.json.ValidatorException;
+import com.github.i49.hibiscus.schema.Schema;
+import com.github.i49.hibiscus.validation.BasicJsonValidator;
 
-public class BuzzJsonValidator extends JsonValidator {
+import static com.github.i49.hibiscus.schema.SchemaComponents.*;
 
-	private static ObjectType ROOT = object(
-		required("trips", array(
+public class BuzzJsonValidator extends BasicJsonValidator {
+
+	private static final Schema schema = schema(
+		object(
+			required("trips", array(
 				object(
 					required("location", string()),
 					optional("distance", number())
 				)
 			)),
-		required("sites", array(
+			required("sites", array(
 				object(
 					required("host", string()),
 					optional("port", number()),
@@ -21,11 +23,11 @@ public class BuzzJsonValidator extends JsonValidator {
 					optional("excludes", array(string()))
 				)	
 			)),
-		required("hive", object())
+			required("hive", object())
+		)
 	);
 	
-	@Override
-	public void validate(JsonNode node) throws ValidatorException {
-		validate(node, ROOT);
+	public BuzzJsonValidator() {
+		super(schema);
 	}
 }
